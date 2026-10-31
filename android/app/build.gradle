@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.vermiveda.oms'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.vermiveda.oms'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0-test'
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.activity:activity:1.9.3'
+}
