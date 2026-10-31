@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Vermi Veda OMS",
+  "short_name": "Vermi Veda",
+  "description": "Vermi Veda order management for Admin and Field Executives",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f8f5",
+  "theme_color": "#103f2d",
+  "icons": [
+    { "src": "./pwa-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
