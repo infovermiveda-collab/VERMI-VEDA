@@ -113,6 +113,22 @@ tbody tr:hover{background:#f8fbf8}
  .top>div:last-child{font-size:11px}
  .item{grid-template-columns:minmax(0,1fr) 48px 65px 30px}
 }
+
+/* iPhone navigation compact pass */
+@media(max-width:700px){
+ .side{padding:8px 12px 10px;gap:7px}
+ .brand{padding:2px 5px 7px;font-size:14px;border-bottom:1px solid #ffffff26}
+ .brand:before{width:8px;height:8px;margin-right:6px}
+ .brand small{font-size:11px;padding-left:5px}
+ .nav{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px 0 5px}
+ .nav::-webkit-scrollbar{display:none}
+ .nav button{flex:0 0 auto;min-width:max-content;padding:9px 13px;font-size:12px;border-radius:10px;white-space:nowrap}
+ .top{padding:10px 13px;min-height:0;gap:7px}
+ .top h1{font-size:17px}
+ .top p{font-size:11px;margin-top:2px}
+ .top>div:last-child{font-size:12px}
+ .content{padding-top:12px}
+}
 </style></head><body><div id="app"></div><script>
 function showOmsFatal(message){
   document.body.innerHTML = `<main style="font:16px/1.5 Arial,sans-serif;max-width:680px;margin:8vh auto;padding:24px;color:#1e2a23"><h1 style="color:#176b45">Vermi Veda OMS</h1><h2>Page could not start</h2><p>${String(message||'Unknown error').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p><p>Refresh this page. If the issue continues, open Chrome DevTools with <b>Ctrl + Shift + J</b> and share a screenshot of the Console tab.</p><button onclick="location.reload()" style="background:#176b45;color:white;border:0;padding:10px 16px;border-radius:8px;cursor:pointer">Reload OMS</button></main>`;
