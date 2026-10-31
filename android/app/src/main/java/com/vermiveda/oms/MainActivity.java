@@ -9,10 +9,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import androidx.activity.OnBackPressedCallback;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.ComponentActivity;
 import androidx.webkit.WebViewAssetLoader;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends ComponentActivity {
     private WebView webView;
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
