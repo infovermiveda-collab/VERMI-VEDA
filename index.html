@@ -129,6 +129,32 @@ tbody tr:hover{background:#f8fbf8}
  .top>div:last-child{font-size:12px}
  .content{padding-top:12px}
 }
+
+/* Tablet-sized iPhone viewport fallback: keep the app in compact mobile mode */
+@media(max-width:900px){
+ .shell{grid-template-columns:1fr}
+ .side{padding:8px 12px 10px;gap:7px}
+ .brand{padding:2px 5px 7px;font-size:14px;border-bottom:1px solid #ffffff26}
+ .brand img{display:none}
+ .brand small{display:inline;padding-left:5px;font-size:11px}
+ .nav{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:1px 0 5px}
+ .nav::-webkit-scrollbar{display:none}
+ .nav button{flex:0 0 auto;min-width:max-content;padding:9px 13px;font-size:12px;border-radius:10px;white-space:nowrap}
+ .top{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px;min-height:0}
+ .top h1{font-size:17px}.top p{font-size:11px;margin-top:2px}
+ .top>div:last-child{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px}
+ .content{padding:12px 12px calc(28px + env(safe-area-inset-bottom))}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat{min-height:90px;padding:12px}
+ .stat small{font-size:12px}.stat b{font-size:22px}
+ .formgrid{grid-template-columns:minmax(0,1fr)}
+ .span2,.span3{grid-column:auto}
+ .field{min-width:0;margin:9px 0;gap:5px}
+ .field input,.field select,.field textarea,input,select,textarea{width:100%;max-width:100%;min-width:0;font-size:16px;min-height:44px;padding:10px 11px}
+ .toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+ .toolbar>*{width:100%;max-width:100%}
+ .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
 </style></head><body><div id="app"></div><script>
 function showOmsFatal(message){
   document.body.innerHTML = `<main style="font:16px/1.5 Arial,sans-serif;max-width:680px;margin:8vh auto;padding:24px;color:#1e2a23"><h1 style="color:#176b45">Vermi Veda OMS</h1><h2>Page could not start</h2><p>${String(message||'Unknown error').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p><p>Refresh this page. If the issue continues, open Chrome DevTools with <b>Ctrl + Shift + J</b> and share a screenshot of the Console tab.</p><button onclick="location.reload()" style="background:#176b45;color:white;border:0;padding:10px 16px;border-radius:8px;cursor:pointer">Reload OMS</button></main>`;
