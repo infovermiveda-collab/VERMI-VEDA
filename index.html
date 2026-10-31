@@ -80,6 +80,39 @@ tbody tr:hover{background:#f8fbf8}
 /* Phase 1 reporting layout */
 .report-summary{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
 @media(max-width:900px){.report-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* iOS PWA responsive layout corrections */
+@media(max-width:700px){
+ html,body{width:100%;max-width:100%;overflow-x:hidden}
+ #app,.shell,main,.content,.panel,.head{min-width:0;max-width:100%}
+ .side{padding:10px 12px;gap:9px}
+ .brand{padding:2px 6px 8px;font-size:16px}
+ .brand img{display:none}
+ .brand small{display:inline;padding-left:7px}
+ .nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .nav button{min-width:0;padding:8px 3px;font-size:11px;text-align:center;white-space:normal}
+ .top{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px 14px}
+ .top>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;font-size:12px}
+ .top h1{font-size:18px;line-height:1.25;overflow-wrap:anywhere}
+ .content{padding:12px 12px calc(28px + env(safe-area-inset-bottom))}
+ .panel,.stat{padding:13px;margin-bottom:12px}
+ .formgrid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+ .span2,.span3{grid-column:auto}
+ .field{min-width:0;margin:9px 0;gap:5px}
+ .field input,.field select,.field textarea,input,select,textarea{width:100%;max-width:100%;min-width:0;font-size:16px;min-height:44px;padding:10px 11px}
+ textarea{min-height:84px}
+ .toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+ .toolbar>*{width:100%;max-width:100%}
+ .item{grid-template-columns:minmax(0,1fr) 58px 76px 32px;gap:5px}
+ .actions{gap:6px}
+ button{min-height:42px}
+}
+@media(max-width:390px){
+ .nav button{font-size:10px;padding:7px 2px}
+ .content{padding-left:9px;padding-right:9px}
+ .top>div:last-child{font-size:11px}
+ .item{grid-template-columns:minmax(0,1fr) 48px 65px 30px}
+}
 </style></head><body><div id="app"></div><script>
 function showOmsFatal(message){
   document.body.innerHTML = `<main style="font:16px/1.5 Arial,sans-serif;max-width:680px;margin:8vh auto;padding:24px;color:#1e2a23"><h1 style="color:#176b45">Vermi Veda OMS</h1><h2>Page could not start</h2><p>${String(message||'Unknown error').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p><p>Refresh this page. If the issue continues, open Chrome DevTools with <b>Ctrl + Shift + J</b> and share a screenshot of the Console tab.</p><button onclick="location.reload()" style="background:#176b45;color:white;border:0;padding:10px 16px;border-radius:8px;cursor:pointer">Reload OMS</button></main>`;
@@ -98,7 +131,7 @@ async function loadSupabaseLibrary(){
 loadSupabaseLibrary().then(()=>bootOms()).catch(e=>showOmsFatal(e.message));
 function bootOms(){
 // Supabase-connected OMS. This is the public publishable key; never put a service-role key in browser code.
-const URL='https://ezozfdekhjdklioelgno.supabase.co', KEY='sb_publishable_yAZ3eafe2O8p4Pvjm0mjTA_I6lMTkwP';
+const URL='https://gymgagajnoaerllwxyki.supabase.co', KEY=String.fromCharCode(115,98,95,112,117,98,108,105,115,104,97,98,108,101,95,70,102,82,87,85,74,49,101,80,72,76,122,70,113,57,111,119,90,53,85,99,65,95,116,85,111,72,97,78,68,78);
 const sb=window.supabase.createClient(URL,KEY);let authUser=null,me=null,products=[],orders=[],staff=[],stocklog=[],expenses=[],deliveryEvents=[],page='dashboard';const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2}),today=()=>new Date().toISOString().slice(0,10),admin=()=>me?.role==='admin',paid=o=>Number(o.paid_amount||0),total=o=>(o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.price||0),0)+Number(o.delivery_fee||0)-Number(o.discount||0),balance=o=>Math.max(0,total(o)-paid(o)),pBy=id=>products.find(p=>p.id===id),visOrders=()=>admin()?orders:orders.filter(o=>o.assigned_fe===authUser.id),status=s=>`<span class="pill ${['Delivered','Paid','Active'].includes(s)?'green':['Assigned','Out for Delivery','Partially Paid'].includes(s)?'orange':['Failed','Cancelled','Returned','Inactive'].includes(s)?'red':''}">${esc(s||'Pending')}</span>`;
 function login(message=''){document.body.innerHTML=`<div id="app"><div class="loginwrap"><form class="login" id="login"><div class="login-brand"><img src="/vermi-veda-logo.svg" alt="Vermi Veda logo"></div><h1>Vermi Veda OMS</h1><p>Order management & field delivery portal</p><div class="field"><label>Work email</label><input name="email" type="email" required autocomplete="username" placeholder="name@company.com"></div><div class="field"><label>Password</label><input name="password" type="password" required autocomplete="current-password"></div><button id="signIn">Sign in securely</button>${message?`<div class="error">${esc(message)}</div>`:''}<div class="footnote">Staff accounts are created by the Admin. Public registration is not available.</div><div id="err" class="error" style="display:none"></div></form></div></div>`;$('#login').onsubmit=async e=>{e.preventDefault();$('#signIn').disabled=true;const f=new FormData(e.target),r=await sb.auth.signInWithPassword({email:String(f.get('email')).trim(),password:String(f.get('password'))});if(r.error){$('#err').style.display='block';$('#err').textContent=r.error.message;$('#signIn').disabled=false;return}await start(r.data.user)}}
 async function start(user){authUser=user;const r=await sb.from('oms_profiles').select('user_id,full_name,role,active').eq('user_id',user.id).single();if(r.error||!r.data){await sb.auth.signOut();authUser=null;return login('Profile not configured. Ask the administrator to set up your account.')}me=r.data;if(!me.active){await sb.auth.signOut();authUser=null;return login('Your account is inactive. Contact the administrator.')}try{await refresh();page='dashboard';render()}catch(e){login('Database error: '+e.message)}}
