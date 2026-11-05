@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [android-apk-production-2026-11-01]
-    paths: ['android/**', '.github/workflows/android-live-apk.yml']
+    paths: ['android/**', 'index.html', '.github/workflows/android-live-apk.yml']
 permissions:
   contents: read
   actions: write
