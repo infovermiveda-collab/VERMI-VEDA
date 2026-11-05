@@ -224,6 +224,16 @@ tbody tr:hover{background:#f8fbf8}
  .toolbar>*{max-width:none;width:100%}
  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 }
+
+.route-plan-summary{display:flex;flex-wrap:wrap;gap:12px 22px;padding:13px;background:#edf6ef;border:1px solid #d8e9dc;border-radius:12px;margin:12px 0;color:#214b32}
+.route-plan-list{list-style:none;padding:0;margin:12px 0;display:grid;gap:9px}
+.route-plan-stop{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e0e9e2;border-radius:12px;background:#fff}
+.route-stop-number{flex:0 0 32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#176b45;color:#fff;font-weight:700}
+.route-stop-details{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.route-stop-details small{color:#68776d;font-size:12px}
+.route-stop-details span{font-size:13px;color:#53645a;overflow-wrap:anywhere}
+.route-plan-stop button{flex:0 0 auto}
+@media(max-width:600px){.route-plan-stop{align-items:flex-start;flex-wrap:wrap}.route-stop-details{flex-basis:calc(100% - 48px)}.route-plan-stop button{margin-left:44px}}
 </style></head><body><div id="app"></div><script>
 function showOmsFatal(message){
   document.body.innerHTML = `<main style="font:16px/1.5 Arial,sans-serif;max-width:680px;margin:8vh auto;padding:24px;color:#1e2a23"><h1 style="color:#176b45">Vermi Veda OMS</h1><h2>Page could not start</h2><p>${String(message||'Unknown error').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p><p>Refresh this page. If the issue continues, open Chrome DevTools with <b>Ctrl + Shift + J</b> and share a screenshot of the Console tab.</p><button onclick="location.reload()" style="background:#176b45;color:white;border:0;padding:10px 16px;border-radius:8px;cursor:pointer">Reload OMS</button></main>`;
