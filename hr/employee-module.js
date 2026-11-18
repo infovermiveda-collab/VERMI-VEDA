@@ -18,7 +18,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <div class="vvhr-stats" id="vvhr-stats"></div>
       <div class="vvhr-toolbar">
         <input id="vvhr-search" placeholder="Search employee, code, phone or department…">
-        <select id="vvhr-status"><option value="">All statuses</option><option>Active</option><option>Inactive</option><option>Resigned</option></select>
+        <select id="vvhr-status"><option value="">All statuses</option><option value="active">Active</option><option value="probation">Probation</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select>
         <button class="alt" id="vvhr-export">Export CSV</button>
       </div>
       <div class="vvhr-tablewrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Monthly Salary</th><th>Status</th><th>Action</th></tr></thead><tbody id="vvhr-body"></tbody></table></div>
@@ -31,17 +31,17 @@ export function renderEmployeeModule(root, sb, options = {}) {
   const draw = () => {
     const q = root.querySelector("#vvhr-search").value.trim().toLowerCase();
     const status = root.querySelector("#vvhr-status").value;
-    const filtered = rows.filter(e => (!status || e.status===status) && (!q || [e.employee_code,e.full_name,e.mobile,e.department,e.designation].join(" ").toLowerCase().includes(q)));
-    const active = rows.filter(e=>e.status==="Active").length;
+    const filtered = rows.filter(e => (!status || e.employment_status===status) && (!q || [e.employee_code,e.full_name,e.mobile,e.department,e.designation].join(" ").toLowerCase().includes(q)));
+    const active = rows.filter(e=>e.employment_status==="active").length;
     root.querySelector("#vvhr-stats").innerHTML = `
       <div><small>Total Employees</small><b>${rows.length}</b></div>
       <div><small>Active</small><b>${active}</b></div>
-      <div><small>Inactive</small><b>${rows.filter(e=>e.status==="Inactive").length}</b></div>
-      <div><small>Resigned</small><b>${rows.filter(e=>e.status==="Resigned").length}</b></div>`;
+      <div><small>Inactive</small><b>${rows.filter(e=>e.employment_status==="terminated").length}</b></div>
+      <div><small>Resigned</small><b>${rows.filter(e=>e.employment_status==="resigned").length}</b></div>`;
     body.innerHTML = filtered.length ? filtered.map(e=>`<tr>
       <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td>
       <td>${escapeHtml(e.department||"—")}</td><td>${escapeHtml(e.designation||"—")}</td><td>${escapeHtml(e.joining_date||"—")}</td>
-      <td>${money(e.monthly_salary)}</td><td><span class="vvhr-badge ${escapeHtml(e.status.toLowerCase())}">${escapeHtml(e.status)}</span></td>
+      <td>${money(e.monthly_fixed_salary)}</td><td><span class="vvhr-badge ${escapeHtml(e.employment_status)}">${escapeHtml(e.employment_status)}</span></td>
       <td>${canManage ? `<button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button>` : "—"}</td></tr>`).join("") : '<tr><td colspan="9" class="vvhr-empty">No employee records found.</td></tr>';
     root.querySelector("#vvhr-count").textContent = `Showing ${filtered.length} of ${rows.length} employees`;
     body.querySelectorAll(".vvhr-edit").forEach(b=>b.onclick=()=>openForm(rows.find(e=>e.id===b.dataset.id)));
@@ -66,8 +66,8 @@ export function renderEmployeeModule(root, sb, options = {}) {
             <label>Joining Date *<input name="joining_date" required type="date" value="${value("joining_date")}"></label>
             <label>Department<input name="department" value="${value("department")}"></label>
             <label>Designation<input name="designation" value="${value("designation")}"></label>
-            <label>Monthly Salary (₹)<input name="monthly_salary" type="number" min="0" step="0.01" value="${value("monthly_salary")}"></label>
-            <label>Status<select name="status"><option ${e?.status==="Active"?"selected":""}>Active</option><option ${e?.status==="Inactive"?"selected":""}>Inactive</option><option ${e?.status==="Resigned"?"selected":""}>Resigned</option></select></label>
+            <label>Monthly Salary (₹)<input name="monthly_fixed_salary" type="number" min="0" step="0.01" value="${value("monthly_fixed_salary")}"></label>
+            <label>Status<select name="employment_status"><option value="active" ${e?.employment_status==="active"?"selected":""}>Active</option><option value="probation" ${e?.employment_status==="probation"?"selected":""}>Probation</option><option value="resigned" ${e?.employment_status==="resigned"?"selected":""}>Resigned</option><option value="terminated" ${e?.employment_status==="terminated"?"selected":""}>Terminated</option></select></label>
             <label class="wide">Address<textarea name="address" rows="2">${value("address")}</textarea></label>
             <label class="wide">Notes<textarea name="notes" rows="2">${value("notes")}</textarea></label>
           </div>
@@ -80,7 +80,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
     modal.querySelector("#vvhr-form").onsubmit=async ev=>{
       ev.preventDefault();
       const f=new FormData(ev.target);
-      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_salary:Number(f.get("monthly_salary")||0),status:f.get("status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
+      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
       const result=e ? await sb.from("vvhr_employees").update(data).eq("id",e.id) : await sb.from("vvhr_employees").insert(data);
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
