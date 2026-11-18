@@ -122,7 +122,7 @@ set search_path = public
 as $
 begin
   if new.employee_code is null or btrim(new.employee_code) = '' then
-    new.employee_code := 'VV' || lpad(nextval('public.vvhr_employee_code_seq')::text, 4, '0');
+    new.employee_code := 'VV' || lpad(nextval('public.vvhr_employee_code_seq')::text, 3, '0');
   end if;
   return new;
 end;
