@@ -39,7 +39,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <div><small>Probation</small><b>${rows.filter(e=>e.employment_status==="probation").length}</b></div>
       <div><small>Resigned</small><b>${rows.filter(e=>e.employment_status==="resigned").length}</b></div>`;
     body.innerHTML = filtered.length ? filtered.map(e=>`<tr>
-      <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td>
+      <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td><td>${escapeHtml(e.email||"—")}</td>
       <td>${escapeHtml(e.department||"—")}</td><td>${escapeHtml(e.designation||"—")}</td><td>${escapeHtml(e.joining_date||"—")}</td>
       <td>${money(e.monthly_fixed_salary)}</td><td><span class="vvhr-badge ${escapeHtml(e.employment_status)}">${escapeHtml(e.employment_status)}</span></td>
       <td>${canManage ? `<button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button>` : "—"}</td></tr>`).join("") : '<tr><td colspan="9" class="vvhr-empty">No employee records found.</td></tr>';
