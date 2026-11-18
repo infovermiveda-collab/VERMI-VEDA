@@ -39,16 +39,16 @@ create table if not exists public.vvhr_onboarding_requests (
 alter table public.vvhr_onboarding_requests enable row level security;
 
 drop policy if exists "vvhr onboarding admin access" on public.vvhr_onboarding_requests;
-create policy "vvhr onboarding admin access"
+create policy "vvhr onboarding admin/hr access"
 on public.vvhr_onboarding_requests
 for all to authenticated
 using (
   exists (select 1 from public.vvhr_user_profiles p
-          where p.user_id = auth.uid() and p.role = 'admin')
+          where p.user_id = auth.uid() and p.role in ('admin','hr'))
 )
 with check (
   exists (select 1 from public.vvhr_user_profiles p
-          where p.user_id = auth.uid() and p.role = 'admin')
+          where p.user_id = auth.uid() and p.role in ('admin','hr'))
 );
 
 -- Private bucket: no public access.
@@ -57,18 +57,18 @@ values ('vvhr-employee-documents', 'vvhr-employee-documents', false)
 on conflict (id) do update set public = false;
 
 drop policy if exists "vvhr private docs admin access" on storage.objects;
-create policy "vvhr private docs admin access"
+create policy "vvhr private docs admin/hr access"
 on storage.objects
 for all to authenticated
 using (
   bucket_id = 'vvhr-employee-documents'
   and exists (select 1 from public.vvhr_user_profiles p
-              where p.user_id = auth.uid() and p.role = 'admin')
+              where p.user_id = auth.uid() and p.role in ('admin','hr'))
 )
 with check (
   bucket_id = 'vvhr-employee-documents'
   and exists (select 1 from public.vvhr_user_profiles p
-              where p.user_id = auth.uid() and p.role = 'admin')
+              where p.user_id = auth.uid() and p.role in ('admin','hr'))
 );
 
 create index if not exists vvhr_onboarding_status_idx
@@ -115,7 +115,7 @@ create trigger vvhr_onboarding_employee_code_trigger
 before insert on public.vvhr_employees
 for each row execute function public.vvhr_set_employee_code_on_insert();
 
--- Admin-only approval: locks the request, verifies required docs, inserts employee,
+-- Admin/HR approval: locks the request, verifies required docs, inserts employee,
 -- copies private document metadata, and marks the request approved atomically.
 create or replace function public.vvhr_approve_onboarding(
   p_request_id uuid,
@@ -136,9 +136,9 @@ declare
 begin
   if not exists (
     select 1 from public.vvhr_user_profiles p
-    where p.user_id = auth.uid() and p.role = 'admin'
+    where p.user_id = auth.uid() and p.role in ('admin','hr')
   ) then
-    raise exception 'HR admin permission required';
+    raise exception 'HR permission required';
   end if;
 
   select * into v_request
