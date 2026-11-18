@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
   const { data: employee, error: employeeError } = await admin
     .from("vvhr_employees")
-    .select("id,employee_code,full_name,email,auth_user_id,oms_provisioning_status,oms_provisioning_attempts")
+    .select("id,employee_code,full_name,email,auth_user_id,oms_provisioning_status,oms_provisioning_attempts,oms_provisioning_started_at")
     .eq("id", employeeId).maybeSingle();
   if (employeeError) return json({ error: "Unable to load employee" }, 500, origin);
   if (!employee) return json({ error: "Employee not found" }, 404, origin);
@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
       oms_provisioning_status: "pending",
       oms_provisioning_error: null,
       oms_provisioning_attempts: Number(employee.oms_provisioning_attempts || 0) + 1,
+      oms_provisioning_started_at: new Date().toISOString(),
     })
     .eq("id", employeeId)
     .in("oms_provisioning_status", ["not_started", "failed"])
@@ -99,7 +100,23 @@ Deno.serve(async (req) => {
     .select("id")
     .maybeSingle();
   if (pendingError) return json({ error: "Provisioning status could not be updated: " + pendingError.message }, 500, origin);
-  if (!claimed) return json({ error: "Provisioning is already in progress or account is already linked. Refresh status before retrying." }, 409, origin);
+  let activeClaim = claimed;
+  // Recover a pending claim only when it is older than 15 minutes (or has no timestamp).
+  if (!activeClaim && employee.oms_provisioning_status === "pending") {
+    const staleCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const staleUpdate = admin.from("vvhr_employees").update({
+      oms_provisioning_status: "pending",
+      oms_provisioning_error: null,
+      oms_provisioning_attempts: Number(employee.oms_provisioning_attempts || 0) + 1,
+      oms_provisioning_started_at: new Date().toISOString(),
+    }).eq("id", employeeId).eq("oms_provisioning_status", "pending")
+      .is("auth_user_id", null).or(`oms_provisioning_started_at.is.null,oms_provisioning_started_at.lt.${staleCutoff}`)
+      .select("id").maybeSingle();
+    const { data: recovered, error: recoveryError } = await staleUpdate;
+    if (recoveryError) return json({ error: "Stale provisioning recovery failed: " + recoveryError.message }, 500, origin);
+    activeClaim = recovered;
+  }
+  if (!activeClaim) return json({ error: "Provisioning is already in progress or account is already linked. Refresh status before retrying." }, 409, origin);
 
   const password = tempPassword();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
