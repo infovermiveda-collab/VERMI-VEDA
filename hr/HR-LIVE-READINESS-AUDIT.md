@@ -26,3 +26,8 @@ This audit used read-only SQL checks. No database writes, migration application,
 - Confirmed no `vvhr-employee-documents` bucket exists in live Storage.
 - No matching `vvhr` Storage object policies were returned.
 - This is a release blocker for onboarding document upload/preview. The migration draft creates the private bucket and policies; these remain unapplied.
+
+## Additional onboarding privacy review
+- Registration UI collects Aadhaar, PAN, and bank-account data; these fields are stored in onboarding request records by the current draft flow.
+- Treat this data as highly sensitive. Restrict table access to authorized HR/Admin, minimize retention, and review encryption/access logging before enabling the workflow.
+- No live activation recommended until private Storage bucket, policies, role/RLS checks, and privacy controls are reviewed.
