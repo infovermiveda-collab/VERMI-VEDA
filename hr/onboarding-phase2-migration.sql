@@ -117,8 +117,9 @@ $$;
 create or replace function public.vvhr_set_employee_code_on_insert()
 returns trigger
 language plpgsql
+security definer
 set search_path = public
-as $$
+as $
 begin
   if new.employee_code is null or btrim(new.employee_code) = '' then
     new.employee_code := 'VV' || lpad(nextval('public.vvhr_employee_code_seq')::text, 4, '0');
