@@ -21,7 +21,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
         <select id="vvhr-status"><option value="">All statuses</option><option value="active">Active</option><option value="probation">Probation</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select>
         <button class="alt" id="vvhr-export">Export CSV</button>
       </div>
-      <div class="vvhr-tablewrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Monthly Salary</th><th>Status</th><th>Action</th></tr></thead><tbody id="vvhr-body"></tbody></table></div>
+      <div class="vvhr-tablewrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Monthly Salary</th><th>Status</th><th>Action</th></tr></thead><tbody id="vvhr-body"></tbody></table></div>
       <div class="vvhr-foot" id="vvhr-count"></div>
       <div id="vvhr-modal" class="vvhr-modal" hidden></div>
     </section>`;
@@ -31,7 +31,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   const draw = () => {
     const q = root.querySelector("#vvhr-search").value.trim().toLowerCase();
     const status = root.querySelector("#vvhr-status").value;
-    const filtered = rows.filter(e => (!status || e.employment_status===status) && (!q || [e.employee_code,e.full_name,e.mobile,e.department,e.designation].join(" ").toLowerCase().includes(q)));
+    const filtered = rows.filter(e => (!status || e.employment_status===status) && (!q || [e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation].join(" ").toLowerCase().includes(q)));
     const active = rows.filter(e=>e.employment_status==="active").length;
     root.querySelector("#vvhr-stats").innerHTML = `
       <div><small>Total Employees</small><b>${rows.length}</b></div>
@@ -62,7 +62,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
         <form id="vvhr-form">
           <div class="vvhr-formgrid">
             <label>Full Name *<input name="full_name" required value="${value("full_name")}"></label>
-            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>
+            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>\n            <label>Email<input name="email" type="email" value="${value("email")}"></label>
             <label>Joining Date *<input name="joining_date" required type="date" value="${value("joining_date")}"></label>
             <label>Department<input name="department" value="${value("department")}"></label>
             <label>Designation<input name="designation" value="${value("designation")}"></label>
@@ -80,7 +80,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
     modal.querySelector("#vvhr-form").onsubmit=async ev=>{
       ev.preventDefault();
       const f=new FormData(ev.target);
-      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
+      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),email:f.get("email").trim()||null,joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
       let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data);}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
@@ -92,7 +92,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-status").onchange=draw;
   root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
   root.querySelector("#vvhr-export").onclick=()=>{
-    const csvRows=[["Employee ID","Name","Mobile","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
+    const csvRows=[["Employee ID","Name","Mobile","Email","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
     const csvCell=v=>{let s=String(v??"");if(/^[\\s]*[=+\\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
     const csv=csvRows.map(row=>row.map(csvCell).join(",")).join("\n");
     const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="VermiVeda_Employees.csv";a.click();
