@@ -60,6 +60,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
     if(account.length<6||account.length>20){err.textContent="Enter a valid bank account number.";return;}
     const data={full_name:String(fd.get("full_name")).trim(),mobile:String(fd.get("mobile")).trim(),email:String(fd.get("email")||"").trim()||null,date_of_birth:fd.get("date_of_birth")||null,gender:fd.get("gender")||null,address:String(fd.get("address")||"").trim()||null,joining_date:fd.get("joining_date"),department:String(fd.get("department")||"").trim()||null,designation:String(fd.get("designation")||"").trim()||null,monthly_fixed_salary:Number(fd.get("monthly_fixed_salary")||0),emergency_contact_name:String(fd.get("emergency_contact_name")).trim(),emergency_contact_relationship:String(fd.get("emergency_contact_relationship")||"").trim()||null,emergency_contact_mobile:String(fd.get("emergency_contact_mobile")).trim(),emergency_contact_alt_mobile:String(fd.get("emergency_contact_alt_mobile")||"").trim()||null,aadhaar_number:String(fd.get("aadhaar_number")||"").trim()||null,pan_number:String(fd.get("pan_number")||"").trim().toUpperCase()||null,bank_account_name:String(fd.get("bank_account_name")||"").trim()||null,bank_name:String(fd.get("bank_name")||"").trim()||null,bank_account_number:String(fd.get("bank_account_number")||"").trim()||null,bank_ifsc:String(fd.get("bank_ifsc")||"").trim().toUpperCase()||null,status:"under_verification",document_metadata:{},created_by:(await sb.auth.getUser()).data.user?.id||null};
     btn.disabled=true;btn.textContent="Uploading & Saving…";
+    let id=null;const uploadedPaths=[];
     try{
       const saved=await sb.from("vvhr_onboarding_requests").insert(data).select("id").single();
       if(saved.error)throw saved.error;
@@ -68,6 +69,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
         const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=id+"/"+key+"/"+Date.now()+"_"+safe;
         const up=await sb.storage.from("vvhr-employee-documents").upload(path,file,{contentType:file.type,upsert:false});
         if(up.error)throw new Error(key+" upload failed: "+up.error.message);
+        uploadedPaths.push(path);
         metadata[key]={file_name:file.name,storage_path:path,uploaded_at:new Date().toISOString(),verification_status:"pending"};
       }
       const upd=await sb.from("vvhr_onboarding_requests").update({document_metadata:metadata,status:"under_verification"}).eq("id",id);
