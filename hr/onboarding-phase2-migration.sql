@@ -51,6 +51,23 @@ with check (
           where p.user_id = auth.uid() and p.role in ('admin','hr'))
 );
 
+-- Extend existing employee/document management policies to Admin + HR.
+drop policy if exists "vvhr employees admin all" on public.vvhr_employees;
+create policy "vvhr employees admin/hr all"
+on public.vvhr_employees for all to authenticated
+using (exists (select 1 from public.vvhr_user_profiles p
+               where p.user_id = auth.uid() and p.role in ('admin','hr')))
+with check (exists (select 1 from public.vvhr_user_profiles p
+                    where p.user_id = auth.uid() and p.role in ('admin','hr')));
+
+drop policy if exists "vvhr documents admin all" on public.vvhr_employee_documents;
+create policy "vvhr documents admin/hr all"
+on public.vvhr_employee_documents for all to authenticated
+using (exists (select 1 from public.vvhr_user_profiles p
+               where p.user_id = auth.uid() and p.role in ('admin','hr')))
+with check (exists (select 1 from public.vvhr_user_profiles p
+                    where p.user_id = auth.uid() and p.role in ('admin','hr')));
+
 -- Private bucket: no public access.
 insert into storage.buckets (id, name, public)
 values ('vvhr-employee-documents', 'vvhr-employee-documents', false)
