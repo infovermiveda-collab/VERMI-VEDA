@@ -94,7 +94,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-export").onclick=()=>{
     const csvRows=[["Employee ID","Name","Mobile","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
     const csv=csvRows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VermiVeda_Employees.csv";a.click();URL.revokeObjectURL(a.href);
+    const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="VermiVeda_Employees.csv";a.click();
   };
   load();
 }
