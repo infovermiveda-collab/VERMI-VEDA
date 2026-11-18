@@ -29,10 +29,10 @@ export function renderOnboardingModule(root, sb, options = {}) {
           <label class="wide">Complete Address<textarea name="address" rows="2"></textarea></label>
         </div>
         <h3>2. Identity & Bank Details</h3><div class="vvhr-onboard-grid">
-          <label>Aadhaar Number<input name="aadhaar_number" inputmode="numeric" maxlength="12" placeholder="12 digit Aadhaar"></label>
-          <label>PAN Number<input name="pan_number" maxlength="10" placeholder="ABCDE1234F"></label>
-          <label>Account Holder Name<input name="bank_account_name"></label><label>Bank Name<input name="bank_name"></label>
-          <label>Bank Account Number<input name="bank_account_number" inputmode="numeric"></label><label>IFSC Code<input name="bank_ifsc" maxlength="11"></label>
+          <label>Aadhaar Number *<input name="aadhaar_number" required inputmode="numeric" maxlength="12" placeholder="12 digit Aadhaar"></label>
+          <label>PAN Number *<input name="pan_number" required maxlength="10" placeholder="ABCDE1234F"></label>
+          <label>Account Holder Name *<input name="bank_account_name" required></label><label>Bank Name *<input name="bank_name" required></label>
+          <label>Bank Account Number *<input name="bank_account_number" required inputmode="numeric"></label><label>IFSC Code *<input name="bank_ifsc" required maxlength="11" placeholder="ABCD0123456"></label>
         </div>
         <h3>3. Emergency Contact</h3><div class="vvhr-onboard-grid">
           <label>Contact Person Name *<input name="emergency_contact_name" required></label>
@@ -52,12 +52,18 @@ export function renderOnboardingModule(root, sb, options = {}) {
     const form=ev.currentTarget, fd=new FormData(form), err=root.querySelector("#vvhr-onboard-error"), btn=root.querySelector("#vvhr-onboard-save");
     err.textContent="";
     const fileMap={}; for(const [key,label,required] of docs){const file=form.elements[key]?.files?.[0];if(required&&!file){err.textContent=label+" is required.";return;}if(file&&file.size>8*1024*1024){err.textContent=label+" exceeds 8 MB.";return;}if(file&& !["application/pdf","image/jpeg","image/png"].includes(file.type)){err.textContent=label+" must be PDF, JPG or PNG.";return;}if(file)fileMap[key]=file;}
+    const mobile=String(fd.get("mobile")||"").replace(/\\D/g,""),aadhaar=String(fd.get("aadhaar_number")||"").replace(/\\D/g,""),pan=String(fd.get("pan_number")||"").trim().toUpperCase(),ifsc=String(fd.get("bank_ifsc")||"").trim().toUpperCase(),account=String(fd.get("bank_account_number")||"").replace(/\\s/g,"");
+    if(mobile.length!==10){err.textContent="Enter a valid 10-digit mobile number.";return;}
+    if(aadhaar.length!==12){err.textContent="Aadhaar must contain 12 digits.";return;}
+    if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){err.textContent="Enter a valid PAN format (ABCDE1234F).";return;}
+    if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)){err.textContent="Enter a valid IFSC code.";return;}
+    if(account.length<6||account.length>20){err.textContent="Enter a valid bank account number.";return;}
     const data={full_name:String(fd.get("full_name")).trim(),mobile:String(fd.get("mobile")).trim(),email:String(fd.get("email")||"").trim()||null,date_of_birth:fd.get("date_of_birth")||null,gender:fd.get("gender")||null,address:String(fd.get("address")||"").trim()||null,joining_date:fd.get("joining_date"),department:String(fd.get("department")||"").trim()||null,designation:String(fd.get("designation")||"").trim()||null,monthly_fixed_salary:Number(fd.get("monthly_fixed_salary")||0),emergency_contact_name:String(fd.get("emergency_contact_name")).trim(),emergency_contact_relationship:String(fd.get("emergency_contact_relationship")||"").trim()||null,emergency_contact_mobile:String(fd.get("emergency_contact_mobile")).trim(),emergency_contact_alt_mobile:String(fd.get("emergency_contact_alt_mobile")||"").trim()||null,aadhaar_number:String(fd.get("aadhaar_number")||"").trim()||null,pan_number:String(fd.get("pan_number")||"").trim().toUpperCase()||null,bank_account_name:String(fd.get("bank_account_name")||"").trim()||null,bank_name:String(fd.get("bank_name")||"").trim()||null,bank_account_number:String(fd.get("bank_account_number")||"").trim()||null,bank_ifsc:String(fd.get("bank_ifsc")||"").trim().toUpperCase()||null,status:"under_verification",document_metadata:{},created_by:(await sb.auth.getUser()).data.user?.id||null};
     btn.disabled=true;btn.textContent="Uploading & Saving…";
     try{
       const saved=await sb.from("vvhr_onboarding_requests").insert(data).select("id").single();
       if(saved.error)throw saved.error;
-      const id=saved.data.id, metadata={};
+      id=saved.data.id;const metadata={};
       for(const [key,file] of Object.entries(fileMap)){
         const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=id+"/"+key+"/"+Date.now()+"_"+safe;
         const up=await sb.storage.from("vvhr-employee-documents").upload(path,file,{contentType:file.type,upsert:false});
@@ -68,7 +74,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
       if(upd.error)throw upd.error;
       form.reset();err.textContent="Registration submitted. HR verification is pending.";
       err.classList.add("success");
-    }catch(e){err.textContent=e.message||"Unable to submit registration.";err.classList.remove("success");}
+    }catch(e){if(uploadedPaths.length)await sb.storage.from("vvhr-employee-documents").remove(uploadedPaths).catch(()=>{});if(id)await sb.from("vvhr_onboarding_requests").delete().eq("id",id).catch(()=>{});err.textContent=e.message||"Unable to submit registration.";err.classList.remove("success");}
     finally{btn.disabled=false;btn.textContent="Submit Registration";}
   };
 }
