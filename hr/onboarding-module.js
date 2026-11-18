@@ -52,7 +52,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
     const form=ev.currentTarget, fd=new FormData(form), err=root.querySelector("#vvhr-onboard-error"), btn=root.querySelector("#vvhr-onboard-save");
     err.textContent="";
     const fileMap={}; for(const [key,label,required] of docs){const file=form.elements[key]?.files?.[0];if(required&&!file){err.textContent=label+" is required.";return;}if(file&&file.size>8*1024*1024){err.textContent=label+" exceeds 8 MB.";return;}if(file&& !["application/pdf","image/jpeg","image/png"].includes(file.type)){err.textContent=label+" must be PDF, JPG or PNG.";return;}if(file)fileMap[key]=file;}
-    const mobile=String(fd.get("mobile")||"").replace(/\\D/g,""),aadhaar=String(fd.get("aadhaar_number")||"").replace(/\\D/g,""),pan=String(fd.get("pan_number")||"").trim().toUpperCase(),ifsc=String(fd.get("bank_ifsc")||"").trim().toUpperCase(),account=String(fd.get("bank_account_number")||"").replace(/\\s/g,"");
+    const mobile=String(fd.get("mobile")||"").replace(/\D/g,""),aadhaar=String(fd.get("aadhaar_number")||"").replace(/\D/g,""),pan=String(fd.get("pan_number")||"").trim().toUpperCase(),ifsc=String(fd.get("bank_ifsc")||"").trim().toUpperCase(),account=String(fd.get("bank_account_number")||"").replace(/\\s/g,"");
     if(mobile.length!==10){err.textContent="Enter a valid 10-digit mobile number.";return;}
     if(aadhaar.length!==12){err.textContent="Aadhaar must contain 12 digits.";return;}
     if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){err.textContent="Enter a valid PAN format (ABCDE1234F).";return;}
