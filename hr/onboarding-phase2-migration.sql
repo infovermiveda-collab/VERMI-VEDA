@@ -93,8 +93,8 @@ create index if not exists vvhr_onboarding_status_idx
 create index if not exists vvhr_onboarding_created_idx
   on public.vvhr_onboarding_requests(created_at desc);
 
--- Ensure employee codes are assigned at approval, even if the Phase 1 trigger
--- was never installed. Sequence-based assignment is concurrency-safe.
+-- Centralized employee-code assignment uses a database sequence and trigger,
+-- keeping onboarding approval and manual employee creation consistent.
 create sequence if not exists public.vvhr_employee_code_seq start 1;
 
 do $$
@@ -146,7 +146,6 @@ as $$
 declare
   v_request public.vvhr_onboarding_requests%rowtype;
   v_employee_id uuid;
-  v_employee_code text;
   v_doc_key text;
   v_doc jsonb;
   v_required text[] := array['aadhaar_front','aadhaar_back','pan_card','bank_proof','employee_photo'];
