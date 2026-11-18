@@ -36,7 +36,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
     root.querySelector("#vvhr-stats").innerHTML = `
       <div><small>Total Employees</small><b>${rows.length}</b></div>
       <div><small>Active</small><b>${active}</b></div>
-      <div><small>Inactive</small><b>${rows.filter(e=>e.employment_status==="terminated").length}</b></div>
+      <div><small>Probation</small><b>${rows.filter(e=>e.employment_status==="probation").length}</b></div>
       <div><small>Resigned</small><b>${rows.filter(e=>e.employment_status==="resigned").length}</b></div>`;
     body.innerHTML = filtered.length ? filtered.map(e=>`<tr>
       <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td>
@@ -92,7 +92,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-status").onchange=draw;
   root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
   root.querySelector("#vvhr-export").onclick=()=>{
-    const csvRows=[["Employee ID","Name","Mobile","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.department,e.designation,e.joining_date,e.monthly_salary,e.status,e.address])];
+    const csvRows=[["Employee ID","Name","Mobile","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
     const csv=csvRows.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\n");
     const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="VermiVeda_Employees.csv";a.click();URL.revokeObjectURL(a.href);
   };
