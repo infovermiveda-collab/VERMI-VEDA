@@ -180,53 +180,7 @@ begin
     end if;
   end loop;
 
-  -- Serialize code allocation to avoid duplicate codes during concurrent approvals.
-  perform pg_advisory_xact_lock(hashtext('vvhr_employee_code'));
-  select 'VV' || lpad((coalesce(max(nullif(regexp_replace(employee_code, '^VV', ''), '')::integer), 0) + 1)::text, 3, '0')
-    into v_employee_code
-  from public.vvhr_employees
-  where employee_code ~ '^VV[0-9]+    employee_code, full_name, mobile, email, date_of_birth, address, designation,
-    department, joining_date, employment_status, monthly_fixed_salary,
-    bank_account_name, bank_account_number, bank_ifsc, pan_number, notes
-  ) values (
-    v_employee_code, v_request.full_name, v_request.mobile, v_request.email,
-    v_request.date_of_birth, v_request.address, v_request.designation,
-    v_request.department, v_request.joining_date, 'active',
-    v_request.monthly_fixed_salary, v_request.bank_account_name,
-    v_request.bank_account_number, v_request.bank_ifsc, v_request.pan_number,
-    'Created from onboarding approval. ' || coalesce(v_request.hr_remarks, '')
-  )
-  returning id into v_employee_id;
-
-  foreach v_doc_key in array v_all_docs loop
-    v_doc := v_request.document_metadata -> v_doc_key;
-    if v_doc is not null and coalesce(v_doc->>'storage_path','') <> '' then
-      insert into public.vvhr_employee_documents (
-        employee_id, document_type, file_name, storage_path, uploaded_at
-      ) values (
-        v_employee_id, v_doc_key, coalesce(v_doc->>'file_name', v_doc_key),
-        v_doc->>'storage_path', coalesce((v_doc->>'uploaded_at')::timestamptz, now())
-      );
-    end if;
-  end loop;
-
-  update public.vvhr_onboarding_requests
-  set status = 'approved',
-      employee_id = v_employee_id,
-      approved_by = auth.uid(),
-      approved_at = now(),
-      hr_remarks = coalesce(p_hr_remarks, hr_remarks),
-      updated_at = now()
-  where id = p_request_id;
-
-  return v_employee_id;
-end;
-$$;
-
-revoke all on function public.vvhr_approve_onboarding(uuid,text) from public;
-grant execute on function public.vvhr_approve_onboarding(uuid,text) to authenticated;
-;
-
+  -- Employee code is assigned by the table trigger using the sequence.
   insert into public.vvhr_employees (
     full_name, mobile, email, date_of_birth, address, designation,
     department, joining_date, employment_status, monthly_fixed_salary,
