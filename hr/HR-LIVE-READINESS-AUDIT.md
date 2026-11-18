@@ -21,3 +21,8 @@ Supabase project: ezozfdekhjdklioelgno
 
 ## Safe scope
 This audit used read-only SQL checks. No database writes, migration application, or deployment were performed.
+
+## Additional storage check (read-only)
+- Confirmed no `vvhr-employee-documents` bucket exists in live Storage.
+- No matching `vvhr` Storage object policies were returned.
+- This is a release blocker for onboarding document upload/preview. The migration draft creates the private bucket and policies; these remain unapplied.
