@@ -76,8 +76,10 @@ create index if not exists vvhr_onboarding_status_idx
 create index if not exists vvhr_onboarding_created_idx
   on public.vvhr_onboarding_requests(created_at desc);
 
--- Align the existing employee-code sequence to current VV codes.
--- This does not create a second trigger; Phase 1 already defines the code trigger.
+-- Ensure employee codes are assigned at approval, even if the Phase 1 trigger
+-- was never installed. Sequence-based assignment is concurrency-safe.
+create sequence if not exists public.vvhr_employee_code_seq start 1;
+
 do $$
 declare
   v_max bigint;
@@ -94,6 +96,24 @@ begin
   end if;
 end;
 $$;
+
+create or replace function public.vvhr_set_employee_code_on_insert()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.employee_code is null or btrim(new.employee_code) = '' then
+    new.employee_code := 'VV' || lpad(nextval('public.vvhr_employee_code_seq')::text, 4, '0');
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists vvhr_onboarding_employee_code_trigger on public.vvhr_employees;
+create trigger vvhr_onboarding_employee_code_trigger
+before insert on public.vvhr_employees
+for each row execute function public.vvhr_set_employee_code_on_insert();
 
 -- Admin-only approval: locks the request, verifies required docs, inserts employee,
 -- copies private document metadata, and marks the request approved atomically.
