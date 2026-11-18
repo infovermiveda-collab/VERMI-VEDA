@@ -17,8 +17,9 @@ function json(body: unknown, status = 200) {
 }
 
 function tempPassword() {
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
-  const raw = Array.from(bytes, b => (b % 62).toString(36)).join("");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const raw = Array.from(bytes, b => alphabet[b % alphabet.length]).join("");
   return "Vv!" + raw + "9";
 }
 
@@ -69,6 +70,11 @@ Deno.serve(async (req) => {
   if (requestError) return json({ error: "Unable to verify approved onboarding" }, 500);
   if (!approvedRequest) return json({ error: "Only approved onboarding employees can be provisioned" }, 403);
 
+  const { error: pendingError } = await admin.from("vvhr_employees")
+    .update({ oms_provisioning_status: "pending", oms_provisioning_error: null, oms_provisioning_attempts: 1 })
+    .eq("id", employeeId);
+  if (pendingError) return json({ error: "Provisioning status could not be updated: " + pendingError.message }, 500);
+
   const password = tempPassword();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: employee.email.trim().toLowerCase(),
@@ -76,7 +82,10 @@ Deno.serve(async (req) => {
     email_confirm: true,
     user_metadata: { full_name: employee.full_name, employee_code: employee.employee_code, account_origin: "hr_onboarding" },
   });
-  if (createError || !created.user) return json({ error: createError?.message || "Auth account creation failed" }, 400);
+  if (createError || !created.user) {
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: createError?.message || "Auth account creation failed" }).eq("id", employeeId);
+    return json({ error: createError?.message || "Auth account creation failed" }, 400);
+  }
 
   const userId = created.user.id;
   const { error: omsProfileError } = await admin.from("oms_profiles").insert({
@@ -85,6 +94,7 @@ Deno.serve(async (req) => {
   });
   if (omsProfileError) {
     await admin.auth.admin.deleteUser(userId);
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: omsProfileError.message }).eq("id", employeeId);
     return json({ error: "OMS profile creation failed: " + omsProfileError.message }, 500);
   }
 
@@ -92,8 +102,11 @@ Deno.serve(async (req) => {
   if (linkError) {
     await admin.from("oms_profiles").delete().eq("user_id", userId);
     await admin.auth.admin.deleteUser(userId);
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: linkError.message }).eq("id", employeeId);
     return json({ error: "Employee linking failed: " + linkError.message }, 500);
   }
+
+  await admin.from("vvhr_employees").update({ oms_provisioning_status: "success", oms_provisioning_error: null, oms_provisioned_at: new Date().toISOString() }).eq("id", employeeId);
 
   return json({
     success: true,
