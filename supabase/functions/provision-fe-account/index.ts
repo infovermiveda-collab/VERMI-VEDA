@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     user_metadata: { full_name: employee.full_name, employee_code: employee.employee_code, account_origin: "hr_onboarding" },
   });
   if (createError || !created.user) {
-    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: createError?.message || "Auth account creation failed" }).eq("id", employeeId);
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: createError?.message || "Auth account creation failed", oms_provisioning_started_at: null }).eq("id", employeeId);
     return json({ error: createError?.message || "Auth account creation failed" }, 400, origin);
   }
 
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
   });
   if (omsProfileError) {
     await admin.auth.admin.deleteUser(userId);
-    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: omsProfileError.message }).eq("id", employeeId);
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: omsProfileError.message, oms_provisioning_started_at: null }).eq("id", employeeId);
     return json({ error: "OMS profile creation failed: " + omsProfileError.message }, 500, origin);
   }
 
@@ -145,11 +145,18 @@ Deno.serve(async (req) => {
   if (linkError) {
     await admin.from("oms_profiles").delete().eq("user_id", userId);
     await admin.auth.admin.deleteUser(userId);
-    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: linkError.message }).eq("id", employeeId);
+    await admin.from("vvhr_employees").update({ oms_provisioning_status: "failed", oms_provisioning_error: linkError.message, oms_provisioning_started_at: null }).eq("id", employeeId);
     return json({ error: "Employee linking failed: " + linkError.message }, 500, origin);
   }
 
-  await admin.from("vvhr_employees").update({ oms_provisioning_status: "success", oms_provisioning_error: null, oms_provisioned_at: new Date().toISOString() }).eq("id", employeeId);
+  const { error: successUpdateError } = await admin.from("vvhr_employees").update({ oms_provisioning_status: "success", oms_provisioning_error: null, oms_provisioning_started_at: null, oms_provisioned_at: new Date().toISOString() }).eq("id", employeeId).eq("auth_user_id", userId);
+  if (successUpdateError) {
+    // Roll back the linked profile and Auth user so retry cannot leave an orphan account.
+    await admin.from("vvhr_employees").update({ auth_user_id: null, oms_provisioning_status: "failed", oms_provisioning_error: successUpdateError.message, oms_provisioning_started_at: null }).eq("id", employeeId).eq("auth_user_id", userId);
+    await admin.from("oms_profiles").delete().eq("user_id", userId);
+    await admin.auth.admin.deleteUser(userId);
+    return json({ error: "Provisioning status finalization failed: " + successUpdateError.message }, 500, origin);
+  }
 
   return json({
     success: true,
