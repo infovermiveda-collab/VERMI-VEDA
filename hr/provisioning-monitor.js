@@ -35,7 +35,7 @@ export function renderProvisioning(root, sb, options = {}) {
       if(!confirm("Create or recover FE login for this employee?"))return;b.disabled=true;b.textContent="Working…";msg.textContent="";
       const res=await sb.functions.invoke("provision-fe-account",{body:{employee_id:b.dataset.retry}});
       if(res.error||!res.data?.success){msg.textContent="Provisioning failed: "+(res.error?.message||res.data?.error||"Unknown error");await load();return}
-      msg.textContent="Account created. Temporary password: "+res.data.temporary_password+" — share securely; employee must change it on first login.";
+      msg.textContent="Account created successfully. Temporary password will be shown in a one-time prompt; employee must change it on first login.";if(res.data.temporary_password)window.prompt("Temporary password — copy and share securely. Avoid group chats.",res.data.temporary_password);
       await load();
     });
   }
