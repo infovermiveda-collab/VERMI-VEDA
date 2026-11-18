@@ -26,6 +26,7 @@ This checklist is for pre-deployment validation. No production migration or depl
 - [ ] Required docs: Aadhaar front, Aadhaar back, PAN, bank proof, employee photo.
 - [ ] Approval is blocked until all required documents are verified.
 - [ ] Rejected applications cannot be approved.
+- [ ] Server-side approval requires `under_verification` status (not just UI gating).
 - [ ] Approval creates one employee only and marks request approved atomically.
 - [ ] Employee documents metadata is copied to employee document table.
 
