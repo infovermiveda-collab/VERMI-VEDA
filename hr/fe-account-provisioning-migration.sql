@@ -14,3 +14,25 @@ alter table public.vvhr_employees
 -- Onboarding approval should create the employee master record first.
 -- FE account provisioning runs as a separate Edge Function so failures can be retried
 -- without losing the approved joining record.
+
+-- First-login password change completion. The caller can only clear their own flag.
+create or replace function public.oms_complete_password_change()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+  update public.oms_profiles
+     set must_change_password = false
+   where user_id = auth.uid();
+  if not found then
+    raise exception 'OMS profile not found';
+  end if;
+end;
+$$;
+revoke all on function public.oms_complete_password_change() from public;
+grant execute on function public.oms_complete_password_change() to authenticated;
