@@ -168,6 +168,9 @@ begin
   if v_request.status = 'approved' or v_request.employee_id is not null then
     raise exception 'This registration has already been approved';
   end if;
+  if v_request.status <> 'under_verification' then
+    raise exception 'Registration must be under verification before approval';
+  end if;
   if v_request.status = 'rejected' then
     raise exception 'Rejected registration cannot be approved';
   end if;
