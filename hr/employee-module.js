@@ -82,7 +82,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       const f=new FormData(ev.target);
       const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
-      const result=e ? await sb.from("vvhr_employees").update(data).eq("id",e.id) : await sb.from("vvhr_employees").insert(data);
+      const result=e ? await sb.from("vvhr_employees").update(data).eq("id",e.id) : await sb.from("vvhr_employees").insert({...data,employee_code:"VV-EMP-"+Date.now()});
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
       closeForm();await load();
     };
