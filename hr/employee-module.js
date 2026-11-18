@@ -42,7 +42,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td><td>${escapeHtml(e.email||"—")}</td>
       <td>${escapeHtml(e.department||"—")}</td><td>${escapeHtml(e.designation||"—")}</td><td>${escapeHtml(e.joining_date||"—")}</td>
       <td>${money(e.monthly_fixed_salary)}</td><td><span class="vvhr-badge ${escapeHtml(e.employment_status)}">${escapeHtml(e.employment_status)}</span></td>
-      <td>${canManage ? `<button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button>` : "—"}</td></tr>`).join("") : '<tr><td colspan="9" class="vvhr-empty">No employee records found.</td></tr>';
+      <td>${canManage ? `<button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button>` : "—"}</td></tr>`).join("") : '<tr><td colspan="10" class="vvhr-empty">No employee records found.</td></tr>';
     root.querySelector("#vvhr-count").textContent = `Showing ${filtered.length} of ${rows.length} employees`;
     body.querySelectorAll(".vvhr-edit").forEach(b=>b.onclick=()=>openForm(rows.find(e=>e.id===b.dataset.id)));
   };
@@ -93,7 +93,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
   root.querySelector("#vvhr-export").onclick=()=>{
     const csvRows=[["Employee ID","Name","Mobile","Email","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
-    const csvCell=v=>{let s=String(v??"");if(/^[\\s]*[=+\\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
+    const csvCell=v=>{let s=String(v??"");if(/^\\s*[=+\\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
     const csv=csvRows.map(row=>row.map(csvCell).join(",")).join("\n");
     const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="VermiVeda_Employees.csv";a.click();
   };
