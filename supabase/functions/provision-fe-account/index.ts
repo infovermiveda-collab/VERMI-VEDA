@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
   const { data: employee, error: employeeError } = await admin
     .from("vvhr_employees")
-    .select("id,employee_code,full_name,email,auth_user_id")
+    .select("id,employee_code,full_name,email,auth_user_id,oms_provisioning_status,oms_provisioning_attempts")
     .eq("id", employeeId).maybeSingle();
   if (employeeError) return json({ error: "Unable to load employee" }, 500, origin);
   if (!employee) return json({ error: "Employee not found" }, 404, origin);
@@ -85,10 +85,21 @@ Deno.serve(async (req) => {
   if (requestError) return json({ error: "Unable to verify approved onboarding" }, 500, origin);
   if (!approvedRequest) return json({ error: "Only approved onboarding employees can be provisioned" }, 403, origin);
 
-  const { error: pendingError } = await admin.from("vvhr_employees")
-    .update({ oms_provisioning_status: "pending", oms_provisioning_error: null, oms_provisioning_attempts: 1 })
-    .eq("id", employeeId);
+  // Atomic claim: only not_started/failed records may enter pending. This blocks
+  // concurrent retry requests from creating multiple Auth users for one employee.
+  const { data: claimed, error: pendingError } = await admin.from("vvhr_employees")
+    .update({
+      oms_provisioning_status: "pending",
+      oms_provisioning_error: null,
+      oms_provisioning_attempts: Number(employee.oms_provisioning_attempts || 0) + 1,
+    })
+    .eq("id", employeeId)
+    .in("oms_provisioning_status", ["not_started", "failed"])
+    .is("auth_user_id", null)
+    .select("id")
+    .maybeSingle();
   if (pendingError) return json({ error: "Provisioning status could not be updated: " + pendingError.message }, 500, origin);
+  if (!claimed) return json({ error: "Provisioning is already in progress or account is already linked. Refresh status before retrying." }, 409, origin);
 
   const password = tempPassword();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
