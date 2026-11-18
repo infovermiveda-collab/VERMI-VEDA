@@ -81,3 +81,91 @@ create index if not exists vvhr_onboarding_status_idx
   on public.vvhr_onboarding_requests(status);
 create index if not exists vvhr_onboarding_created_idx
   on public.vvhr_onboarding_requests(created_at desc);
+
+
+-- Secure HR approval workflow (draft; DO NOT APPLY without explicit approval).
+-- Locks the onboarding row, verifies all required documents, creates the employee
+-- master record, transfers private document metadata, and prevents double approval.
+create or replace function public.vvhr_approve_onboarding(p_request_id uuid, p_hr_remarks text default null)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_request public.vvhr_onboarding_requests%rowtype;
+  v_employee_id uuid;
+  v_doc_key text;
+  v_doc jsonb;
+  v_required text[] := array['aadhaar_front','aadhaar_back','pan_card','bank_proof','employee_photo'];
+begin
+  if not exists (
+    select 1 from public.vvhr_user_profiles p
+    where p.user_id = auth.uid() and p.role = 'admin'
+  ) then
+    raise exception 'HR admin permission required';
+  end if;
+
+  select * into v_request
+  from public.vvhr_onboarding_requests
+  where id = p_request_id
+  for update;
+
+  if not found then raise exception 'Onboarding request not found'; end if;
+  if v_request.status = 'approved' or v_request.employee_id is not null then
+    raise exception 'This registration has already been approved';
+  end if;
+  if v_request.status = 'rejected' then
+    raise exception 'Rejected registration cannot be approved';
+  end if;
+
+  foreach v_doc_key in array v_required loop
+    v_doc := coalesce(v_request.document_metadata -> v_doc_key, '{}'::jsonb);
+    if coalesce(v_doc->>'storage_path','') = ''
+       or coalesce(v_doc->>'verification_status','') <> 'verified' then
+      raise exception 'Required document % is missing or not verified', v_doc_key;
+    end if;
+  end loop;
+
+  insert into public.vvhr_employees (
+    full_name, mobile, email, date_of_birth, address, designation,
+    department, joining_date, employment_status, monthly_fixed_salary,
+    bank_account_name, bank_account_number, bank_ifsc, pan_number,
+    notes
+  ) values (
+    v_request.full_name, v_request.mobile, v_request.email,
+    v_request.date_of_birth, v_request.address, v_request.designation,
+    v_request.department, v_request.joining_date, 'active',
+    v_request.monthly_fixed_salary, v_request.bank_account_name,
+    v_request.bank_account_number, v_request.bank_ifsc, v_request.pan_number,
+    'Created from onboarding approval. ' || coalesce(v_request.hr_remarks,'')
+  )
+  returning id into v_employee_id;
+
+  foreach v_doc_key in array array['aadhaar_front','aadhaar_back','pan_card','bank_proof','employee_photo','resume'] loop
+    v_doc := v_request.document_metadata -> v_doc_key;
+    if v_doc is not null and coalesce(v_doc->>'storage_path','') <> '' then
+      insert into public.vvhr_employee_documents (
+        employee_id, document_type, file_name, storage_path, uploaded_at
+      ) values (
+        v_employee_id, v_doc_key, coalesce(v_doc->>'file_name',v_doc_key),
+        v_doc->>'storage_path', coalesce((v_doc->>'uploaded_at')::timestamptz,now())
+      );
+    end if;
+  end loop;
+
+  update public.vvhr_onboarding_requests
+  set status = 'approved',
+      employee_id = v_employee_id,
+      approved_by = auth.uid(),
+      approved_at = now(),
+      hr_remarks = coalesce(p_hr_remarks,hr_remarks),
+      updated_at = now()
+  where id = p_request_id;
+
+  return v_employee_id;
+end;
+$$;
+
+revoke all on function public.vvhr_approve_onboarding(uuid,text) from public;
+grant execute on function public.vvhr_approve_onboarding(uuid,text) to authenticated;
