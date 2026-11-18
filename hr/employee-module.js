@@ -82,7 +82,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       const f=new FormData(ev.target);
       const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
-      let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{const codes=await sb.from("vvhr_employees").select("employee_code");if(codes.error){modal.querySelector("#vvhr-error").textContent=codes.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}const maxNo=(codes.data||[]).reduce((max,row)=>{const m=String(row.employee_code||"").match(/^VV(\d+)$/);return m?Math.max(max,Number(m[1])):max;},0);data.employee_code="VV"+String(maxNo+1).padStart(3,"0");result=await sb.from("vvhr_employees").insert(data);}
+      let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data);}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
       closeForm();await load();
     };
