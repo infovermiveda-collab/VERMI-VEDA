@@ -25,7 +25,8 @@ export function renderProvisioning(root, sb, options = {}) {
     const filtered=rows.filter(x=>[x.employee_code,x.full_name,x.email].join(" ").toLowerCase().includes(q));
     body.innerHTML=filtered.map(x=>{
       const status=x.oms_provisioning_status||"not_started";
-      const pendingAge=x.oms_provisioning_started_at?Date.now()-new Date(x.oms_provisioning_started_at).getTime():Infinity;\n      const stalePending=status==="pending"&&pendingAge>=15*60*1000;\n      const canRetry=(status==="not_started"||status==="failed"||stalePending)&&!x.auth_user_id&&Boolean(x.email);\n      const dateLabel=status==="success"&&x.oms_provisioned_at?new Date(x.oms_provisioned_at).toLocaleString():status==="pending"&&x.oms_provisioning_started_at?new Date(x.oms_provisioning_started_at).toLocaleString():"—";
+      const pendingAge=x.oms_provisioning_started_at?Date.now()-new Date(x.oms_provisioning_started_at).getTime():Infinity;
+      const stalePending=status==="pending"&&pendingAge>=15*60*1000;\n      const canRetry=(status==="not_started"||status==="failed"||stalePending)&&!x.auth_user_id&&Boolean(x.email);\n      const dateLabel=status==="success"&&x.oms_provisioned_at?new Date(x.oms_provisioned_at).toLocaleString():status==="pending"&&x.oms_provisioning_started_at?new Date(x.oms_provisioning_started_at).toLocaleString():"—";
       return `<tr><td>${esc(x.employee_code)}</td><td>${esc(x.full_name)}</td><td>${esc(x.email||"—")}</td><td>${esc(status)}</td><td>${esc(x.oms_provisioning_attempts||0)}</td><td>${esc(dateLabel)}</td><td>${esc(x.oms_provisioning_error||"—")}</td><td>${canRetry?`<button class="alt" data-retry="${esc(x.id)}">${status==="pending"?"Recover":"Retry"}</button>`:"—"}</td></tr>`;
     }).join("")||'<tr><td colspan="8">No employees found.</td></tr>';
     body.querySelectorAll("[data-retry]").forEach(b=>b.onclick=async()=>{
