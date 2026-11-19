@@ -20,7 +20,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
         <h3>1. Basic Details</h3><div class="vvhr-onboard-grid">
           <label>Full Name *<input name="full_name" required autocomplete="name"></label>
           <label>Mobile Number *<input name="mobile" required inputmode="tel" pattern="[0-9+ -]{10,15}"></label>
-          <label>Email ID<input name="email" type="email"></label>
+          <label>Email ID *<input name="email" type="email" required></label>
           <label>Date of Birth<input name="date_of_birth" type="date"></label>
           <label>Gender<select name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></label>
           <label>Joining Date *<input name="joining_date" type="date" required></label>
@@ -65,7 +65,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
       }
       const upd=await sb.from("vvhr_onboarding_requests").update({document_metadata:metadata,status:"under_verification"}).eq("id",id);
       if(upd.error)throw upd.error;
-      form.reset();err.textContent="Registration submitted. HR verification is pending.";
+      form.reset();err.textContent="Registration submitted. HR verification is pending. A valid email is required for the Employee Portal login.";
       err.classList.add("success");
     }catch(e){if(uploadedPaths.length)await sb.storage.from("vvhr-employee-documents").remove(uploadedPaths).catch(()=>{});if(id)await sb.from("vvhr_onboarding_requests").delete().eq("id",id).catch(()=>{});err.textContent=e.message||"Unable to submit registration.";err.classList.remove("success");}
     finally{btn.disabled=false;btn.textContent="Submit Registration";}
