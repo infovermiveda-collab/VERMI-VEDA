@@ -131,13 +131,13 @@ function render(){
  if(admin()&&!['workspace','dashboard','orders','new','delivery','customers','inventory','expenses','billing','mylog','payments','reports','team','hr-admin',...hrNav.map(n=>n[0])].includes(page))page='workspace';
  if(hrOnly()&&!hrPages.includes(page))page='hr-admin';
  if(employeeOnly()&&page!=='employee-portal')page='employee-portal';
- else if(!admin()&&!hrOnly()&&!employeeOnly()&&!['dashboard','orders','payments','delivery','customers','billing','mylog','leave'].includes(page))page='dashboard';
+ else if(!admin()&&!hrOnly()&&!employeeOnly()&&!['dashboard','orders','payments','delivery','customers','billing','mylog','leave','employee-portal'].includes(page))page='dashboard';
  const inHr=hrPages.includes(page);
  let visibleNav;
  if(admin())visibleNav=page==='workspace'?[]:inHr?[['workspace','⌂  Main Dashboard'],...hrNav]:[['workspace','⌂  Main Dashboard'],...omsNav];
  else if(hrOnly())visibleNav=hrNav;
  else if(employeeOnly())visibleNav=[];
- else visibleNav=omsNav.filter(n=>['dashboard','orders','payments','delivery','customers','billing','mylog'].includes(n[0]));
+ else visibleNav=[['employee-portal','♙  My Employee Portal'],...omsNav.filter(n=>['dashboard','orders','payments','delivery','customers','billing','mylog'].includes(n[0]))];
  document.body.innerHTML=`<div id="app"><div class="shell"><aside class="side"><div class="brand"><img src="/vermi-veda-logo.svg" alt="Vermi Veda logo"><small>${inHr?'HR Administration':'Order Management'}</small></div><div class="nav">${visibleNav.map(n=>`<button class="${page===n[0]?'active':''}" data-page="${n[0]}">${n[1]}</button>`).join('')}</div><small>${inHr?'HR workspace · Shared database':'Shared OMS database'}</small></aside><main><header class="top"><div><h1>${nav.find(n=>n[0]===page)?.[1]||'Dashboard'}</h1><p>${inHr?'Employee & workforce administration':'Shared order-to-delivery tracking'}</p></div><div><b>${esc(me.full_name||authUser.email)}</b> · ${admin()?'Admin':hrOnly()?'HR':'Field Executive'} <button class="alt" id="logout">Log out</button></div></header><div class="content" id="content"></div></main></div></div>`;
  document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));
  $('#logout').onclick=async()=>{await sb.auth.signOut();authUser=me=null;login()};
