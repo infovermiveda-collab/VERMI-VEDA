@@ -53,7 +53,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
     body.innerHTML=filtered.length?filtered.map(e=>{
       const a=byId(e.id)||{};
       return '<tr data-employee="'+esc(e.id)+'"><td><b>'+esc(e.full_name)+'</b><small>'+esc(e.employee_code||"")+' · '+esc(e.mobile||"")+'</small></td><td>'+esc(e.department||"—")+'</td>'+
-      '<td><select data-field="status"><option value="">Not Marked</option>'+[['present','Present'],['absent','Absent'],['half_day','Half Day'],['leave','Leave'],['holiday','Holiday'],['week_off','Week Off']].map(([v,l])=>'<option value="'+v+'" '+(a.status===v?'selected':'')+'>'+l+'</option>').join("")+'</select></td>'+
+      '<td><select data-field="status"><option value="">Not Marked</option>'+[['present','Present'],['absent','Absent'],['half_day','Half Day'],['paid_leave','Paid Leave'],['unpaid_leave','Unpaid Leave'],['holiday','Holiday'],['weekly_off','Weekly Off']].map(([v,l])=>'<option value="'+v+'" '+(a.status===v?'selected':'')+'>'+l+'</option>').join("")+'</select></td>'+
       '<td><input data-field="check_in" type="time" value="'+esc(a.check_in||"")+'"></td><td><input data-field="check_out" type="time" value="'+esc(a.check_out||"")+'"></td>'+
       '<td><input data-field="late_minutes" type="number" min="0" step="1" value="'+esc(a.late_minutes??0)+'"></td><td><input data-field="overtime_minutes" type="number" min="0" step="1" value="'+esc(a.overtime_minutes??0)+'"></td>'+
       '<td><input data-field="remarks" maxlength="500" value="'+esc(a.remarks||"")+'" placeholder="Optional"></td><td><button class="vva-save">Save</button></td></tr>';
