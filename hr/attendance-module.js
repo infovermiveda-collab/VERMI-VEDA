@@ -48,7 +48,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
     const count=s=>filtered.filter(e=>byId(e.id)?.status===s).length;
     const marked=filtered.filter(e=>byId(e.id)).length;
     stats.innerHTML=[
-      ["Employees",filtered.length],["Present",count("present")],["Absent",count("absent")],["Half Day",count("half_day")],["Leave",count("leave")],["Not Marked",filtered.length-marked]
+      ["Employees",filtered.length],["Present",count("present")],["Absent",count("absent")],["Half Day",count("half_day")],["Paid Leave",count("paid_leave")],["Not Marked",filtered.length-marked]
     ].map(([l,n])=>'<div><small>'+l+'</small><b>'+n+'</b></div>').join("");
     body.innerHTML=filtered.length?filtered.map(e=>{
       const a=byId(e.id)||{};
