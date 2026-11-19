@@ -6,7 +6,7 @@ export function renderLeaveModule(root, sb, options = {}) {
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const localDate = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
   const leaveTypes = [["casual","Casual Leave"],["sick","Sick Leave"],["earned","Earned Leave"],["unpaid","Unpaid Leave"],["other","Other"]];
-  let employees = [], requests = [], balances = [], selfEmployee = null, activeTab = "requests";
+  let employees = [], requests = [], balances = [], accounts = [], selfEmployee = null, activeTab = "requests";
   const typeLabel = t => (leaveTypes.find(x=>x[0]===t)||[t,t])[1];
   const statusPill = s => '<span class="vvl-status vvl-'+esc(s)+'">'+esc((s||"pending").replace("_"," "))+'</span>';
   const businessDays = (start,end) => { if(!start||!end)return 0;let n=0,d=new Date(start+"T12:00:00"),last=new Date(end+"T12:00:00");while(d<=last){if(d.getDay()!==0)n++;d.setDate(d.getDate()+1);}return n; };
@@ -40,7 +40,7 @@ export function renderLeaveModule(root, sb, options = {}) {
     }
   }
   function tabButtons() {
-    return '<div class="vvl-tabs"><button class="alt '+(activeTab==="requests"?"active":"")+'" data-vvl-tab="requests">Leave Requests</button>'+(canManage?'<button class="alt '+(activeTab==="balances"?"active":"")+'" data-vvl-tab="balances">Leave Balances</button>':'')+'</div>';
+    return '<div class="vvl-tabs"><button class="alt '+(activeTab==="requests"?"active":"")+'" data-vvl-tab="requests">Leave Requests</button>'+(canManage?'<button class="alt '+(activeTab==="balances"?"active":"")+'" data-vvl-tab="balances">Leave Balances</button><button class="alt '+(activeTab==="accounts"?"active":"")+'" data-vvl-tab="accounts">Employee Login Linking</button>':'')+'</div>';
   }
   function renderAdmin() {
     const pending=requests.filter(r=>r.status==="pending").length;
@@ -51,6 +51,38 @@ export function renderLeaveModule(root, sb, options = {}) {
     content.querySelectorAll("[data-vvl-tab]").forEach(b=>b.onclick=()=>{activeTab=b.dataset.vvlTab;renderAdmin();});
     if(activeTab==="requests")bindAdminRequests();
     if(activeTab==="balances")bindBalances();
+    if(activeTab==="accounts")renderAccountLinking();
+  }
+  async function renderAccountLinking() {
+    content.insertAdjacentHTML("beforeend", '<div class="vvl-panel"><h3>Link Employee to Existing Login</h3><p class="vvl-note">Only active Field Executive accounts are shown. Linking enables employee self-service leave requests for that login.</p><div id="vvl-account-link-body" class="vvl-loading">Loading login accounts…</div></div>');
+    const target=content.querySelector("#vvl-account-link-body");
+    const result=await sb.from("oms_profiles").select("user_id,full_name,role,active").eq("role","fe").eq("active",true).order("full_name");
+    if(result.error){target.innerHTML='<div class="vvl-error">Could not load active FE logins: '+esc(result.error.message)+'</div>';return;}
+    accounts=result.data||[];
+    const draw=()=>{
+      const body=employees.filter(e=>["active","probation"].includes(e.employment_status));
+      const linkedIds=employees.filter(e=>e.auth_user_id).map(e=>e.auth_user_id);
+      target.innerHTML='<div class="vvl-table-wrap"><table><thead><tr><th>Employee</th><th>Department</th><th>Current Login</th><th>Link Active FE Login</th><th>Action</th></tr></thead><tbody>'+body.map(e=>{
+        const current=accounts.find(a=>a.user_id===e.auth_user_id);
+        const options=accounts.filter(a=>!linkedIds.includes(a.user_id)||a.user_id===e.auth_user_id);
+        const exact=options.find(a=>a.full_name.trim().toLowerCase()===e.full_name.trim().toLowerCase());
+        const selected=e.auth_user_id||exact?.user_id||"";
+        return '<tr><td><b>'+esc(e.full_name)+'</b><small>'+esc(e.employee_code)+'</small></td><td>'+esc(e.department||"—")+'</td><td>'+(current?'<span class="vvl-status vvl-approved">Linked: '+esc(current.full_name)+'</span>':'<span class="vvl-status">Not linked</span>')+'</td><td><select data-vvl-account="'+esc(e.id)+'"><option value="">Select active FE login</option>'+options.map(a=>'<option value="'+esc(a.user_id)+'" '+(selected===a.user_id?"selected":"")+'>'+esc(a.full_name)+'</option>').join("")+'</select></td><td><button data-vvl-link="'+esc(e.id)+'" '+(e.auth_user_id?"disabled":"")+'>Link Account</button></td></tr>';
+      }).join("")+'</tbody></table></div><p class="vvl-note">A login can be linked to only one employee. The matching name is preselected where exact; please verify before clicking Link Account.</p>';
+      target.querySelectorAll("[data-vvl-link]").forEach(btn=>btn.onclick=async()=>{
+        const employeeId=btn.dataset.vvlLink,select=target.querySelector('[data-vvl-account="'+employeeId+'"]'),userId=select?.value;
+        if(!userId){alert("Select an active FE login first.");return;}
+        const employee=employees.find(e=>e.id===employeeId),account=accounts.find(a=>a.user_id===userId);
+        if(!confirm('Link '+employee.full_name+' with login '+account?.full_name+'?'))return;
+        btn.disabled=true;btn.textContent="Linking…";
+        const linked=await sb.rpc("vvhr_admin_link_employee_account",{p_employee_id:employeeId,p_user_id:userId});
+        if(linked.error){alert("Account linking failed: "+linked.error.message);btn.disabled=false;btn.textContent="Link Account";return;}
+        const emp=await sb.from("vvhr_employees").select("id,employee_code,full_name,department,employment_status,auth_user_id").order("full_name");
+        if(emp.error){alert("Account linked, but employee list could not refresh: "+emp.error.message);return;}
+        employees=emp.data||[];renderAdmin();
+      });
+    };
+    draw();
   }
   function requestsAdminHtml() {
     const opts=employees.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.employee_code)+' — '+esc(e.full_name)+'</option>').join("");
