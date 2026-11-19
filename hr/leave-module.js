@@ -83,6 +83,7 @@ export function renderLeaveModule(root, sb, options = {}) {
   }
   async function review(id,status){
     const note=prompt(status==="approved"?"Approval remarks (optional):":"Please enter rejection reason:");
+    if(note===null)return;
     if(status==="rejected"&&!String(note||"").trim()){alert("Rejection reason is required.");return;}
     const result=await sb.from("vvhr_leave_requests").update({status,reviewed_by:userId,reviewed_at:new Date().toISOString(),reviewer_remarks:String(note||"").trim()||null}).eq("id",id).eq("status","pending").select("*").single();
     if(result.error){alert("Could not update request: "+result.error.message);return;}
