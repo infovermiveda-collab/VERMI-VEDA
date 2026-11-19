@@ -20,3 +20,20 @@ end $$;
 -- Public schema tables are no longer automatically exposed through the Data API
 -- on newer Supabase projects. RLS remains enabled; existing policies control rows.
 grant select, insert, update on table public.vvhr_attendance to authenticated;
+
+ 
+-- Keep the audit timestamp current when attendance rows are edited.
+create or replace function public.vvhr_attendance_touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists vvhr_attendance_touch_updated_at on public.vvhr_attendance;
+create trigger vvhr_attendance_touch_updated_at
+before update on public.vvhr_attendance
+for each row execute function public.vvhr_attendance_touch_updated_at();
