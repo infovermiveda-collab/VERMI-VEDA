@@ -1,166 +1,169 @@
-// Vermi Veda HR — Daily Attendance (Phase 2)
-// Admin/HR only. Requires vvhr_attendance migration and vvhr_employees.
+// Vermi Veda HR — Employee Attendance Calendar
 export function renderAttendanceModule(root, sb, options = {}) {
   if (options.canManage === false) {
-    root.innerHTML = '<div class="vvhr-attendance-card"><h2>Attendance</h2><p>HR/admin access required.</p></div>';
+    root.innerHTML = '<div class="vvac-card"><h2>Attendance</h2><p>HR/admin access required.</p></div>';
     return;
   }
   const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const localDate = () => { const d = new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-"); };
-  let employees = [], attendance = [], monthlyAttendance = [], saving = false;
-  root.innerHTML = `
-    <section class="vvhr-attendance">
-      <header class="vvhr-attendance-head">
-        <div><h2>Daily Attendance</h2><p>Mark and review employee attendance by date</p></div>
-        <div class="vva-head-actions"><button class="alt" id="vva-daily-tab">Daily Marking</button><button class="alt" id="vva-monthly-tab">Monthly Register</button><button class="alt" id="vva-refresh">↻ Refresh</button></div>
-      </header>
-      <div id="vva-daily-panel"><div class="vvhr-attendance-filters">
-        <label>Attendance Date<input id="vva-date" type="date" value="${localDate()}"></label>
-        <label>Department<select id="vva-dept"><option value="">All Departments</option></select></label>
-        <label>Search Employee<input id="vva-search" placeholder="Name, employee code or mobile"></label>
-        <button class="alt" id="vva-export">Export CSV</button>
-      </div>
-      <div class="vvhr-attendance-stats" id="vva-stats"></div>
-      <div class="vvhr-attendance-note">Choose a status for each employee. Changes are saved per employee; unmarked employees remain unmarked.</div>
-      <div class="vvhr-attendance-table"><table><thead><tr><th>Employee</th><th>Department</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Late (min)</th><th>OT (min)</th><th>Remarks</th><th>Save</th></tr></thead><tbody id="vva-body"></tbody></table></div>
-      <p class="vvhr-attendance-foot" id="vva-foot"></p></div>
-      <section id="vva-monthly-panel" hidden>
-        <div class="vvhr-attendance-filters">
-          <label>Attendance Month<input id="vva-month" type="month" value="${localDate().slice(0,7)}"></label>
-          <label>Department<select id="vva-month-dept"><option value="">All Departments</option></select></label>
-          <label>Search Employee<input id="vva-month-search" placeholder="Name or employee code"></label>
-          <button class="alt" id="vva-month-export">Export Monthly CSV</button>
-        </div>
-        <div class="vvhr-attendance-stats" id="vva-month-stats"></div>
-        <div class="vvhr-attendance-table"><table><thead id="vva-month-head"></thead><tbody id="vva-month-body"></tbody></table></div>
-        <p class="vvhr-attendance-foot" id="vva-month-foot"></p>
-      </section>
-    </section>`;
-  const dateEl=root.querySelector("#vva-date"), deptEl=root.querySelector("#vva-dept"), searchEl=root.querySelector("#vva-search"), body=root.querySelector("#vva-body"), stats=root.querySelector("#vva-stats"), foot=root.querySelector("#vva-foot");
-  const dailyPanel=root.querySelector("#vva-daily-panel"), monthlyPanel=root.querySelector("#vva-monthly-panel");
-  const monthEl=root.querySelector("#vva-month"), monthDept=root.querySelector("#vva-month-dept"), monthSearch=root.querySelector("#vva-month-search");
-  const monthHead=root.querySelector("#vva-month-head"), monthBody=root.querySelector("#vva-month-body"), monthStats=root.querySelector("#vva-month-stats"), monthFoot=root.querySelector("#vva-month-foot");
-  let activeView="daily";
-  const byId = id => attendance.find(a=>a.employee_id===id);
-  const departments = () => [...new Set(employees.map(e=>e.department).filter(Boolean))].sort();
-  async function load() {
-    foot.textContent="Loading employees and attendance…";
-    const [er, ar] = await Promise.all([
-      sb.from("vvhr_employees").select("id,employee_code,full_name,mobile,department,designation,employment_status").in("employment_status",["active","probation"]).order("employee_code"),
-      sb.from("vvhr_attendance").select("*").eq("attendance_date",dateEl.value)
-    ]);
-    if(er.error){foot.textContent="Employee load failed: "+er.error.message;return;}
-    if(ar.error){foot.textContent="Attendance load failed: "+ar.error.message+" — apply the HR attendance SQL migration first.";return;}
-    employees=er.data||[]; attendance=ar.data||[];
-    const selected=deptEl.value;
-    deptEl.innerHTML='<option value="">All Departments</option>'+departments().map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join("");
-    deptEl.value=selected;
-    draw();
-  }
-  function draw(){
-    const q=searchEl.value.trim().toLowerCase(), dept=deptEl.value;
-    const filtered=employees.filter(e=>(!dept||e.department===dept)&&(!q||[e.employee_code,e.full_name,e.mobile,e.department,e.designation].join(" ").toLowerCase().includes(q)));
-    const count=s=>filtered.filter(e=>byId(e.id)?.status===s).length;
-    const marked=filtered.filter(e=>byId(e.id)).length;
-    stats.innerHTML=[
-      ["Employees",filtered.length],["Present",count("present")],["Absent",count("absent")],["Half Day",count("half_day")],["Paid Leave",count("paid_leave")],["Not Marked",filtered.length-marked]
-    ].map(([l,n])=>'<div><small>'+l+'</small><b>'+n+'</b></div>').join("");
-    body.innerHTML=filtered.length?filtered.map(e=>{
-      const a=byId(e.id)||{};
-      return '<tr data-employee="'+esc(e.id)+'"><td><b>'+esc(e.full_name)+'</b><small>'+esc(e.employee_code||"")+' · '+esc(e.mobile||"")+'</small></td><td>'+esc(e.department||"—")+'</td>'+
-      '<td><select data-field="status"><option value="">Not Marked</option>'+[['present','Present'],['absent','Absent'],['half_day','Half Day'],['paid_leave','Paid Leave'],['unpaid_leave','Unpaid Leave'],['holiday','Holiday'],['weekly_off','Weekly Off']].map(([v,l])=>'<option value="'+v+'" '+(a.status===v?'selected':'')+'>'+l+'</option>').join("")+'</select></td>'+
-      '<td><input data-field="check_in" type="time" value="'+esc(a.check_in||"")+'"></td><td><input data-field="check_out" type="time" value="'+esc(a.check_out||"")+'"></td>'+
-      '<td><input data-field="late_minutes" type="number" min="0" step="1" value="'+esc(a.late_minutes??0)+'"></td><td><input data-field="overtime_minutes" type="number" min="0" step="1" value="'+esc(a.overtime_minutes??0)+'"></td>'+
-      '<td><input data-field="remarks" maxlength="500" value="'+esc(a.remarks||"")+'" placeholder="Optional"></td><td><button class="vva-save">Save</button></td></tr>';
-    }).join(""):'<tr><td colspan="9" class="vvhr-attendance-empty">No active/probation employees found for this filter.</td></tr>';
-    foot.textContent='Showing '+filtered.length+' employees · '+marked+' attendance records saved for '+dateEl.value;
-    body.querySelectorAll(".vva-save").forEach(btn=>btn.onclick=()=>saveRow(btn.closest("tr")));
-  }
-  function showView(view){
-    activeView=view;
-    dailyPanel.hidden=view!=="daily"; monthlyPanel.hidden=view!=="monthly";
-    root.querySelector("#vva-daily-tab").classList.toggle("active",view==="daily");
-    root.querySelector("#vva-monthly-tab").classList.toggle("active",view==="monthly");
-    if(view==="monthly") loadMonthly();
-  }
-  async function loadMonthly(){
-    monthFoot.textContent="Loading monthly attendance…";
-    const [year,month]=monthEl.value.split("-").map(Number);
-    if(!year||!month){monthFoot.textContent="Select a valid month.";return;}
-    const start=monthEl.value+"-01";
-    const endDate=new Date(year,month,0).getDate();
-    const end=monthEl.value+"-"+String(endDate).padStart(2,"0");
-    const r=await sb.from("vvhr_attendance").select("employee_id,attendance_date,status,check_in,check_out,late_minutes,overtime_minutes,remarks").gte("attendance_date",start).lte("attendance_date",end).order("attendance_date");
-    if(r.error){monthFoot.textContent="Monthly attendance load failed: "+r.error.message;return;}
-    monthlyAttendance=r.data||[];
-    const selected=monthDept.value;
-    monthDept.innerHTML='<option value="">All Departments</option>'+departments().map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join("");
-    monthDept.value=selected;
-    drawMonthly();
-  }
-  const statusShort={present:"P",absent:"A",half_day:"HD",paid_leave:"PL",unpaid_leave:"UL",weekly_off:"WO",holiday:"H"};
-  function drawMonthly(){
-    const q=monthSearch.value.trim().toLowerCase(),dept=monthDept.value;
-    const filtered=employees.filter(e=>(!dept||e.department===dept)&&(!q||[e.employee_code,e.full_name,e.department].join(" ").toLowerCase().includes(q)));
-    const [year,month]=monthEl.value.split("-").map(Number),days=new Date(year,month,0).getDate();
-    const map=new Map(monthlyAttendance.map(a=>[a.employee_id+"|"+a.attendance_date,a]));
-    const workingDays=Array.from({length:days},(_,i)=>i+1).filter(d=>{const day=new Date(year,month-1,d).getDay();return day!==0;}).length;
-    const summaries=filtered.map(e=>{
-      const records=monthlyAttendance.filter(a=>a.employee_id===e.id);
-      const count=s=>records.filter(a=>a.status===s).length;
-      const present=count("present"),half=count("half_day"),absent=count("absent"),paid=count("paid_leave"),unpaid=count("unpaid_leave"),off=count("weekly_off"),holiday=count("holiday");
-      const weekdayRecords=records.filter(a=>new Date(a.attendance_date+"T00:00:00").getDay()!==0);
-      const weekdayPresent=weekdayRecords.filter(a=>a.status==="present").length;
-      const weekdayHalf=weekdayRecords.filter(a=>a.status==="half_day").length;
-      const weekdayOffAndHoliday=weekdayRecords.filter(a=>a.status==="weekly_off"||a.status==="holiday").length;
-      const employeeWorkingDays=Math.max(0,workingDays-weekdayOffAndHoliday);
-      const percentage=employeeWorkingDays?Math.min(100,((weekdayPresent+weekdayHalf*.5)/employeeWorkingDays)*100):0;
-      return {e,present,half,absent,paid,unpaid,off,holiday,percentage,records};
-    });
-    monthStats.innerHTML=[["Employees",filtered.length],["Present Days",summaries.reduce((n,x)=>n+x.present,0)],["Absent Days",summaries.reduce((n,x)=>n+x.absent,0)],["Half Days",summaries.reduce((n,x)=>n+x.half,0)],["Paid Leaves",summaries.reduce((n,x)=>n+x.paid,0)],["Avg. Attendance",filtered.length?(summaries.reduce((n,x)=>n+x.percentage,0)/filtered.length).toFixed(1)+"%":"0%"]].map(([l,n])=>'<div><small>'+l+'</small><b>'+n+'</b></div>').join("");
-    monthHead.innerHTML='<tr><th>Employee</th>'+Array.from({length:days},(_,i)=>'<th>'+String(i+1).padStart(2,"0")+'</th>').join("")+'<th>Present</th><th>Half</th><th>Absent</th><th>Paid Leave</th><th>Unpaid</th><th>Attendance %</th></tr>';
-    monthBody.innerHTML=summaries.length?summaries.map(x=>'<tr><td><b>'+esc(x.e.full_name)+'</b><small>'+esc(x.e.employee_code||"")+' · '+esc(x.e.department||"—")+'</small></td>'+Array.from({length:days},(_,i)=>{const date=monthEl.value+"-"+String(i+1).padStart(2,"0"),a=map.get(x.e.id+"|"+date);return '<td class="vva-day vva-'+(a?.status||"unmarked")+'" title="'+date+' · '+esc(a?.status||"Not marked")+'">'+(a?statusShort[a.status]||"·":"—")+'</td>';}).join("")+'<td>'+x.present+'</td><td>'+x.half+'</td><td>'+x.absent+'</td><td>'+x.paid+'</td><td>'+x.unpaid+'</td><td><b>'+x.percentage.toFixed(1)+'%</b></td></tr>').join(""):'<tr><td colspan="'+(days+7)+'" class="vvhr-attendance-empty">No employees found.</td></tr>';
-    monthFoot.textContent="Attendance % = (Present + Half Day × 0.5) ÷ employee working days. Sundays, recorded weekly offs and recorded holidays are excluded; leave days remain in the denominator.";
-  }
-  function exportMonthly(){
-    const [year,month]=monthEl.value.split("-").map(Number),days=new Date(year,month,0).getDate(),q=monthSearch.value.trim().toLowerCase(),dept=monthDept.value;
-    const filtered=employees.filter(e=>(!dept||e.department===dept)&&(!q||[e.employee_code,e.full_name,e.department].join(" ").toLowerCase().includes(q)));
-    const map=new Map(monthlyAttendance.map(a=>[a.employee_id+"|"+a.attendance_date,a]));
-    const rows=[["Month","Employee Code","Employee Name","Department",...Array.from({length:days},(_,i)=>String(i+1)), "Present","Half Day","Absent","Paid Leave","Unpaid Leave","Weekly Off","Holiday","Attendance %"]];
-    filtered.forEach(e=>{const records=monthlyAttendance.filter(a=>a.employee_id===e.id),count=s=>records.filter(a=>a.status===s).length,p=count("present"),h=count("half_day"),working=Array.from({length:days},(_,i)=>i+1).filter(d=>new Date(year,month-1,d).getDay()!==0).length,employeeWorking=Math.max(0,working-count("weekly_off")-count("holiday"));rows.push([monthEl.value,e.employee_code,e.full_name,e.department,...Array.from({length:days},(_,i)=>{const a=map.get(e.id+"|"+(monthEl.value+"-"+String(i+1).padStart(2,"0")));return a?statusShort[a.status]||a.status:"";}),p,h,count("absent"),count("paid_leave"),count("unpaid_leave"),count("weekly_off"),count("holiday"),employeeWorking?(((weekdayPresent+weekdayHalf*.5)/employeeWorking)*100).toFixed(1):"0"]);});
-    const cell=v=>{let x=String(v??"");if(/^\s*[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
-    const csv=rows.map(r=>r.map(cell).join(",")).join("\\r\\n"),url=URL.createObjectURL(new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download="VermiVeda_Monthly_Attendance_"+monthEl.value+".csv";a.click();URL.revokeObjectURL(url);
-  }
-  async function saveRow(tr){
-    if(saving)return;
-    const employeeId=tr.dataset.employee, field=k=>tr.querySelector('[data-field="'+k+'"]').value;
-    const status=field("status");
-    if(!status){foot.textContent="Select an attendance status before saving.";return;}
-    const number=k=>Math.max(0,Math.floor(Number(field(k)||0)));
-    const checkIn=field("check_in")||null, checkOut=field("check_out")||null;
-    if(checkIn&&checkOut&&checkOut<checkIn){foot.textContent="Check-out time cannot be earlier than check-in.";return;}
-    const payload={employee_id:employeeId,attendance_date:dateEl.value,status,check_in:checkIn,check_out:checkOut,late_minutes:number("late_minutes"),overtime_minutes:number("overtime_minutes"),remarks:field("remarks").trim()||null,marked_by:(await sb.auth.getUser()).data?.user?.id||null};
-    const btn=tr.querySelector(".vva-save");btn.disabled=true;btn.textContent="Saving…";saving=true;
-    const r=await sb.from("vvhr_attendance").upsert(payload,{onConflict:"employee_id,attendance_date"}).select("*").single();
-    saving=false;btn.disabled=false;btn.textContent="Save";
-    if(r.error){foot.textContent="Save failed: "+r.error.message;return;}
-    const i=attendance.findIndex(a=>a.employee_id===employeeId);
-    if(i>=0)attendance[i]=r.data;else attendance.push(r.data);
-    draw();
-    foot.textContent="Saved attendance for "+(employees.find(e=>e.id===employeeId)?.full_name||"employee")+".";
-  }
-  root.querySelector("#vva-refresh").onclick=()=>activeView==="monthly"?loadMonthly():load();
-  root.querySelector("#vva-daily-tab").onclick=()=>showView("daily");
-  root.querySelector("#vva-monthly-tab").onclick=()=>showView("monthly");
-  monthEl.onchange=loadMonthly;monthDept.onchange=drawMonthly;monthSearch.oninput=drawMonthly;
-  root.querySelector("#vva-month-export").onclick=exportMonthly;
-  dateEl.onchange=load;deptEl.onchange=draw;searchEl.oninput=draw;
-  root.querySelector("#vva-export").onclick=()=>{
-    const rows=[["Date","Employee Code","Name","Department","Status","Check In","Check Out","Late Minutes","Overtime Minutes","Remarks"],
-      ...employees.filter(e=>(!deptEl.value||e.department===deptEl.value)&&(!searchEl.value.trim()||[e.employee_code,e.full_name,e.mobile,e.department].join(" ").toLowerCase().includes(searchEl.value.trim().toLowerCase()))).map(e=>{const a=byId(e.id)||{};return [dateEl.value,e.employee_code,e.full_name,e.department,a.status,a.check_in,a.check_out,a.late_minutes,a.overtime_minutes,a.remarks]})];
-    const cell=v=>{let x=String(v??"");if(/^\s*[=+\-@]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
-    const csv=rows.map(r=>r.map(cell).join(",")).join("\r\n"),url=URL.createObjectURL(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");
-    a.href=url;a.download="VermiVeda_Attendance_"+dateEl.value+".csv";a.click();URL.revokeObjectURL(url);
+  const pad = n => String(n).padStart(2,"0");
+  const today = new Date();
+  let year=today.getFullYear(), month=today.getMonth(), employees=[], records=[], selectedEmployee="", selectedDate="", busy=false;
+  const monthKey=()=>year+"-"+pad(month+1);
+  const dateKey=d=>year+"-"+pad(month+1)+"-"+pad(d);
+  const statusInfo={
+    present:["P","Present"], absent:["AB","Absent"], half_day:["HD","Half Day"],
+    paid_leave:["PL","Paid Leave"], unpaid_leave:["UL","Unpaid Leave"],
+    weekly_off:["WO","Weekly Off"], holiday:["H","Holiday"], travel:["TR","Travel"]
   };
-  load();
+  const findRecord=date=>records.find(r=>r.attendance_date===date);
+  const timeMinutes=t=>{if(!t)return null;const [h,m]=String(t).slice(0,5).split(":").map(Number);return h*60+m;};
+  const duration=(a,b)=>{const x=timeMinutes(a),y=timeMinutes(b);if(x===null||y===null)return 0;return Math.max(0,(y-x+1440)%1440);};
+  const hoursLabel=m=>Math.floor(m/60)+":"+pad(m%60);
+  root.innerHTML=`
+    <section class="vvac">
+      <header class="vvac-header"><div><h2>Attendance Calendar</h2><p>Employee-wise monthly attendance, shifts and working hours</p></div><button class="vvac-refresh" id="vvac-refresh">↻ Refresh</button></header>
+      <section class="vvac-toolbar">
+        <div class="vvac-legend" id="vvac-legend"></div>
+        <div class="vvac-filters">
+          <label>Attendance Month<input id="vvac-month" type="month" value="${monthKey()}"></label>
+          <label>Employee<select id="vvac-employee"><option value="">Loading employees…</option></select></label>
+        </div>
+      </section>
+      <section class="vvac-calendar-panel">
+        <div class="vvac-cal-head">
+          <div class="vvac-nav"><button id="vvac-prev-year" title="Previous year">«</button><button id="vvac-prev" title="Previous month">‹</button><button id="vvac-today">Today</button><button id="vvac-next" title="Next month">›</button><button id="vvac-next-year" title="Next year">»</button></div>
+          <h3 id="vvac-title"></h3>
+          <div class="vvac-view-label">MONTH VIEW</div>
+        </div>
+        <div class="vvac-weekdays"><span>Monday</span><span>Tuesday</span><span>Wednesday</span><span>Thursday</span><span>Friday</span><span>Saturday</span><span>Sunday</span></div>
+        <div class="vvac-grid" id="vvac-grid"></div>
+      </section>
+      <section class="vvac-editor" id="vvac-editor" hidden></section>
+      <p class="vvac-foot" id="vvac-foot">Loading employee attendance…</p>
+    </section>`;
+  const monthInput=root.querySelector("#vvac-month"), employeeSelect=root.querySelector("#vvac-employee"), grid=root.querySelector("#vvac-grid"), editor=root.querySelector("#vvac-editor"), foot=root.querySelector("#vvac-foot");
+  const legend=root.querySelector("#vvac-legend");
+  const setLegend=summary=>{
+    const items=[["Present",summary.present,"present"],["Working on Weekend",summary.weekend,"weekend"],["Working on Holiday",summary.holidayWork,"holidaywork"],["Absent",summary.absent,"absent"],["Weekly Off",summary.weeklyOff,"weeklyoff"],["Holiday",summary.holiday,"holiday"],["Travel",summary.travel,"travel"],["Late Coming",summary.late,"late"]];
+    legend.innerHTML=items.map(([label,n,cls])=>'<span class="vvac-chip vvac-chip-'+cls+'">'+label+' - '+n+'</span>').join("");
+  };
+  async function loadEmployees(){
+    foot.textContent="Loading employee list…";
+    const r=await sb.from("vvhr_employees").select("id,employee_code,full_name,department,designation,employment_status").in("employment_status",["active","probation"]).order("employee_code");
+    if(r.error){foot.textContent="Could not load employees: "+r.error.message;return;}
+    employees=r.data||[];
+    const previous=selectedEmployee;
+    employeeSelect.innerHTML=employees.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.employee_code)+" - "+esc(e.full_name)+'</option>').join("");
+    selectedEmployee=employees.some(e=>e.id===previous)?previous:(employees[0]?.id||"");
+    employeeSelect.value=selectedEmployee;
+    if(!selectedEmployee){grid.innerHTML='<div class="vvac-empty">No active employees found.</div>';foot.textContent="Add an employee first in HR Management.";return;}
+    await loadMonth();
+  }
+  async function loadMonth(){
+    monthInput.value=monthKey();
+    root.querySelector("#vvac-title").textContent=new Date(year,month,1).toLocaleDateString("en-IN",{month:"long",year:"numeric"});
+    if(!selectedEmployee)return;
+    foot.textContent="Loading attendance calendar…";
+    const start=year+"-"+pad(month+1)+"-01",end=year+"-"+pad(month+1)+"-"+pad(new Date(year,month+1,0).getDate());
+    const r=await sb.from("vvhr_attendance").select("*").eq("employee_id",selectedEmployee).gte("attendance_date",start).lte("attendance_date",end).order("attendance_date");
+    if(r.error){foot.textContent="Attendance load failed: "+r.error.message;return;}
+    records=r.data||[];
+    drawCalendar();
+  }
+  function drawCalendar(){
+    const employee=employees.find(e=>e.id===selectedEmployee);
+    const days=new Date(year,month+1,0).getDate(),offset=(new Date(year,month,1).getDay()+6)%7;
+    const byDate=new Map(records.map(r=>[r.attendance_date,r]));
+    const summary={present:0,weekend:0,holidayWork:0,absent:0,weeklyOff:0,holiday:0,travel:0,late:0};
+    records.forEach(r=>{
+      const day=new Date(r.attendance_date+"T12:00:00").getDay();
+      if(r.status==="present"){summary.present++;if(day===0||day===6)summary.weekend++;if(r.is_holiday)summary.holidayWork++;}
+      if(r.status==="absent")summary.absent++;
+      if(r.status==="weekly_off")summary.weeklyOff++;
+      if(r.status==="holiday"||r.is_holiday)summary.holiday++;
+      if(r.status==="travel")summary.travel++;
+      if(Number(r.late_minutes)>0)summary.late++;
+    });
+    setLegend(summary);
+    const cells=[];
+    for(let i=0;i<offset;i++)cells.push('<div class="vvac-day vvac-day-blank"></div>');
+    for(let d=1;d<=days;d++){
+      const date=dateKey(d),r=byDate.get(date),weekday=new Date(year,month,d).getDay();
+      const defaultOff=weekday===0&&!r;
+      const status=r?.status||(defaultOff?"weekly_off":"");
+      const info=statusInfo[status]||["","Not Marked"];
+      const worked=duration(r?.check_in,r?.check_out);
+      const late=Number(r?.late_minutes||0);
+      const checkText=r?.check_in?(r.check_out?"IN "+String(r.check_in).slice(0,5)+" · OUT "+String(r.check_out).slice(0,5):"IN "+String(r.check_in).slice(0,5)+" · Check-out missing"):"";
+      const shift=r?.shift_name||"Shift not assigned";
+      const shiftTime=r?.shift_start_time&&r?.shift_end_time?String(r.shift_start_time).slice(0,5)+" - "+String(r.shift_end_time).slice(0,5):"";
+      const classes=["vvac-day",status?"vvac-status-"+status:"vvac-status-unmarked",date===selectedDate?"vvac-selected":""].filter(Boolean).join(" ");
+      cells.push('<button type="button" class="'+classes+'" data-date="'+date+'"><span class="vvac-date">'+d+'</span>'+
+        (status?'<span class="vvac-statusbar">'+info[1]+(late>0?' · Late '+late+'m':'')+'</span>':'<span class="vvac-unmarked">Not marked</span>')+
+        '<span class="vvac-shift">'+esc(shift)+'</span>'+(shiftTime?'<span class="vvac-shift-time">'+esc(shiftTime)+'</span>':'')+
+        (checkText?'<span class="vvac-punch">'+esc(checkText)+'</span>':'')+
+        (worked?'<span class="vvac-total">Total Hours: '+hoursLabel(worked)+'</span>':(r?.check_in?'<span class="vvac-total vvac-warn">Total Hours: 0:00</span>':""))+
+        (r?.is_holiday&&r.holiday_name?'<span class="vvac-holiday-name">'+esc(r.holiday_name)+'</span>':"")+
+        '<span class="vvac-edit-hint">Click to edit</span></button>');
+    }
+    const total=Math.ceil((offset+days)/7)*7;
+    for(let i=offset+days;i<total;i++)cells.push('<div class="vvac-day vvac-day-blank"></div>');
+    grid.innerHTML=cells.join("");
+    grid.querySelectorAll("[data-date]").forEach(b=>b.onclick=()=>openEditor(b.dataset.date));
+    foot.textContent=(employee?employee.employee_code+" - "+employee.full_name:"")+" · "+records.length+" attendance entries · Click any date to mark or edit attendance.";
+    if(selectedDate&&selectedDate.startsWith(monthKey()))openEditor(selectedDate);
+    else editor.hidden=true;
+  }
+  function openEditor(date){
+    selectedDate=date;
+    const r=records.find(x=>x.attendance_date===date)||{};
+    const dayLabel=new Date(date+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+    editor.hidden=false;
+    editor.innerHTML=`
+      <div class="vvac-editor-head"><div><h3>Attendance Entry</h3><p>${esc(dayLabel)}</p></div><button type="button" class="vvac-close" id="vvac-close">✕</button></div>
+      <form id="vvac-form" class="vvac-form">
+        <label>Attendance Status<select name="status" required>${Object.entries(statusInfo).map(([v,x])=>'<option value="'+v+'" '+(r.status===v?'selected':'')+'>'+x[1]+'</option>').join("")}</select></label>
+        <label>Shift Name<input name="shift_name" maxlength="80" value="${esc(r.shift_name||"")}" placeholder="e.g. Morning Shift"></label>
+        <label>Shift Start<input name="shift_start_time" type="time" value="${esc(r.shift_start_time||"")}"></label>
+        <label>Shift End<input name="shift_end_time" type="time" value="${esc(r.shift_end_time||"")}"></label>
+        <label>Check In<input name="check_in" type="time" value="${esc(r.check_in||"")}"></label>
+        <label>Check Out<input name="check_out" type="time" value="${esc(r.check_out||"")}"></label>
+        <label>Late Minutes<input name="late_minutes" type="number" min="0" value="${Number(r.late_minutes||0)}"></label>
+        <label>Overtime Minutes<input name="overtime_minutes" type="number" min="0" value="${Number(r.overtime_minutes||0)}"></label>
+        <label class="vvac-holiday-toggle"><input name="is_holiday" type="checkbox" ${r.is_holiday?"checked":""}> Holiday / festival</label>
+        <label>Holiday Name<input name="holiday_name" maxlength="120" value="${esc(r.holiday_name||"")}" placeholder="Optional holiday name"></label>
+        <label class="vvac-wide">Remarks<input name="remarks" maxlength="500" value="${esc(r.remarks||"")}" placeholder="Optional remarks"></label>
+        <div class="vvac-form-actions"><button type="button" class="vvac-cancel" id="vvac-cancel">Cancel</button><button type="submit" id="vvac-save">Save Attendance</button></div>
+      </form>`;
+    root.querySelector("#vvac-close").onclick=()=>{editor.hidden=true;selectedDate="";};
+    root.querySelector("#vvac-cancel").onclick=()=>{editor.hidden=true;selectedDate="";};
+    const form=editor.querySelector("#vvac-form");
+    form.elements.check_in.onchange=()=>{const shift=timeMinutes(form.elements.shift_start_time.value),check=timeMinutes(form.elements.check_in.value);if(shift!==null&&check!==null)form.elements.late_minutes.value=Math.max(0,check-shift);};
+    form.onsubmit=async ev=>{
+      ev.preventDefault();if(busy)return;
+      const val=n=>form.elements[n].value;
+      const status=val("status"),checkIn=val("check_in")||null,checkOut=val("check_out")||null;
+      if(checkIn&&checkOut&&checkOut<checkIn){alert("Check-out cannot be earlier than check-in.");return;}
+      const shiftStart=val("shift_start_time")||null,shiftEnd=val("shift_end_time")||null;
+      let late=Math.max(0,Number(val("late_minutes")||0));
+      if(shiftStart&&checkIn){const sm=timeMinutes(shiftStart),ci=timeMinutes(checkIn);late=Math.max(0,ci-sm);}
+      const payload={employee_id:selectedEmployee,attendance_date:date,status,shift_name:val("shift_name").trim()||null,shift_start_time:shiftStart,shift_end_time:shiftEnd,check_in:checkIn,check_out:checkOut,late_minutes:late,overtime_minutes:Math.max(0,Number(val("overtime_minutes")||0)),is_holiday:form.elements.is_holiday.checked,holiday_name:val("holiday_name").trim()||null,remarks:val("remarks").trim()||null,marked_by:(await sb.auth.getUser()).data?.user?.id||null};
+      const btn=form.querySelector("#vvac-save");btn.disabled=true;btn.textContent="Saving…";busy=true;
+      const saved=await sb.from("vvhr_attendance").upsert(payload,{onConflict:"employee_id,attendance_date"}).select("*").single();
+      busy=false;btn.disabled=false;btn.textContent="Save Attendance";
+      if(saved.error){foot.textContent="Could not save attendance: "+saved.error.message;return;}
+      const idx=records.findIndex(x=>x.attendance_date===date);if(idx>=0)records[idx]=saved.data;else records.push(saved.data);
+      drawCalendar();foot.textContent="Attendance saved for "+date+".";
+    };
+  }
+  function changeMonth(delta){const d=new Date(year,month+delta,1);year=d.getFullYear();month=d.getMonth();selectedDate="";loadMonth();}
+  root.querySelector("#vvac-prev").onclick=()=>changeMonth(-1);
+  root.querySelector("#vvac-next").onclick=()=>changeMonth(1);
+  root.querySelector("#vvac-prev-year").onclick=()=>changeMonth(-12);
+  root.querySelector("#vvac-next-year").onclick=()=>changeMonth(12);
+  root.querySelector("#vvac-today").onclick=()=>{year=today.getFullYear();month=today.getMonth();selectedDate="";loadMonth();};
+  root.querySelector("#vvac-refresh").onclick=()=>loadMonth();
+  monthInput.onchange=()=>{if(!monthInput.value)return;const [y,m]=monthInput.value.split("-").map(Number);year=y;month=m-1;selectedDate="";loadMonth();};
+  employeeSelect.onchange=()=>{selectedEmployee=employeeSelect.value;selectedDate="";loadMonth();};
+  loadEmployees();
 }
