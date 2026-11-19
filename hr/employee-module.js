@@ -63,7 +63,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
         <form id="vvhr-form">
           <div class="vvhr-formgrid">
             <label>Full Name *<input name="full_name" required value="${value("full_name")}"></label>
-            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>\n            <label>Email<input name="email" type="email" value="${value("email")}"></label>
+            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>\n            <label>Email *<input name="email" type="email" required value="${value("email")}"></label>
             <label>Joining Date *<input name="joining_date" required type="date" value="${value("joining_date")}"></label>
             <label>Department<input name="department" value="${value("department")}"></label>
             <label>Designation<input name="designation" value="${value("designation")}"></label>
