@@ -42,9 +42,10 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <td><b>${escapeHtml(e.employee_code)}</b></td><td>${escapeHtml(e.full_name)}</td><td>${escapeHtml(e.mobile)}</td><td>${escapeHtml(e.email||"—")}</td>
       <td>${escapeHtml(e.department||"—")}</td><td>${escapeHtml(e.designation||"—")}</td><td>${escapeHtml(e.joining_date||"—")}</td>
       <td>${money(e.monthly_fixed_salary)}</td><td><span class="vvhr-badge ${escapeHtml(e.employment_status)}">${escapeHtml(e.employment_status)}</span></td>
-      <td>${canManage ? `<button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button>` : "—"}</td></tr>`).join("") : '<tr><td colspan="10" class="vvhr-empty">No employee records found.</td></tr>';
+      <td>${canManage ? `<div class="actions"><button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button><button class="alt vvhr-offer" data-id="${escapeHtml(e.id)}">Offer Letter</button></div>` : "—"}</td></tr>`).join("") : '<tr><td colspan="10" class="vvhr-empty">No employee records found.</td></tr>';
     root.querySelector("#vvhr-count").textContent = `Showing ${filtered.length} of ${rows.length} employees`;
     body.querySelectorAll(".vvhr-edit").forEach(b=>b.onclick=()=>openForm(rows.find(e=>e.id===b.dataset.id)));
+    body.querySelectorAll(".vvhr-offer").forEach(b=>b.onclick=async()=>{const row=rows.find(e=>e.id===b.dataset.id);b.disabled=true;b.textContent="Generating…";const r=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:row.id}});if(r.error||!r.data?.success){alert("Offer letter could not be generated: "+(r.error?.message||r.data?.error||"Unknown error"));b.disabled=false;b.textContent="Offer Letter";return;}alert("Offer letter uploaded to Employee Portal for "+row.employee_code+".");b.disabled=false;b.textContent="Offer Letter";});
   };
   async function load() {
     const r = await sb.from("vvhr_employees").select("*").order("employee_code",{ascending:true});
@@ -82,9 +83,9 @@ export function renderEmployeeModule(root, sb, options = {}) {
       const f=new FormData(ev.target);
       const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),email:f.get("email").trim()||null,joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
-      let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data);}
+      let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data).select("id,employee_code,email").single();}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
-      closeForm();await load();
+      closeForm();if(!e&&result.data?.id){const letter=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:result.data.id}});if(letter.error||!letter.data?.success){alert("Employee saved, but offer letter upload failed: "+(letter.error?.message||letter.data?.error||"Unknown error"));}else if(result.data.email){const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:result.data.id}});if(account.error||!account.data?.success){alert("Offer letter uploaded. Employee Portal login needs HR follow-up: "+(account.error?.message||account.data?.error||"Unknown error"));}else if(account.data.temporary_password){window.prompt("Employee Portal temporary password — share securely with the employee.",account.data.temporary_password);}}}await load();
     };
   }
   function closeForm(){modal.hidden=true;modal.innerHTML="";editing=null;}
