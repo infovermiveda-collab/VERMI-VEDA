@@ -7,3 +7,14 @@
 .vvhr-attendance-table{overflow:auto;border:1px solid #e4ece6;border-radius:12px;background:white}.vvhr-attendance-table table{width:100%;border-collapse:collapse;min-width:1120px}.vvhr-attendance-table th,.vvhr-attendance-table td{text-align:left;padding:10px;border-bottom:1px solid #edf1ed;vertical-align:middle}.vvhr-attendance-table th{background:#f7faf7;color:#64736a;font-size:10px;text-transform:uppercase;letter-spacing:.4px}.vvhr-attendance-table td small{display:block;color:#718077;font-size:11px;margin-top:3px}.vvhr-attendance-table input,.vvhr-attendance-table select{min-width:86px;padding:8px;font-size:12px}.vvhr-attendance-table td:nth-child(8) input{min-width:130px}.vvhr-attendance-empty{text-align:center;padding:26px;color:#718077}.vvhr-attendance-foot{font-size:12px;color:#718077;margin-top:10px}
 @media(max-width:900px){.vvhr-attendance-filters{grid-template-columns:1fr 1fr}.vvhr-attendance-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){.vvhr-attendance-head{align-items:flex-start}.vvhr-attendance-head h2{font-size:19px}.vvhr-attendance-filters{grid-template-columns:1fr 1fr}.vvhr-attendance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.vvhr-attendance-stats b{font-size:20px}}
+
+/* Monthly attendance register */
+.vva-head-actions{display:flex;gap:7px;flex-wrap:wrap}.vva-head-actions button.active{background:#174b32;color:#fff;border-color:#174b32}
+#vva-monthly-panel[hidden],#vva-daily-panel[hidden]{display:none!important}
+#vva-monthly-panel .vvhr-attendance-table table{min-width:1450px}
+#vva-monthly-panel .vvhr-attendance-table th,#vva-monthly-panel .vvhr-attendance-table td{padding:7px 8px;text-align:center;white-space:nowrap}
+#vva-monthly-panel .vvhr-attendance-table th:first-child,#vva-monthly-panel .vvhr-attendance-table td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1;min-width:180px}
+#vva-monthly-panel .vvhr-attendance-table th:first-child{background:#f7faf7;z-index:2}
+.vvhr-attendance-table td.vva-day{font-size:11px;font-weight:700;min-width:31px;padding:6px 3px}
+.vva-present{background:#e5f5e9;color:#176b35}.vva-absent{background:#fde9e7;color:#a52a20}.vva-half_day{background:#fff3d9;color:#93600a}.vva-paid_leave{background:#e8efff;color:#315da8}.vva-unpaid_leave{background:#f2e8fa;color:#74439a}.vva-weekly_off,.vva-holiday{background:#edf0f2;color:#58636d}.vva-unmarked{color:#b4bdb7}
+@media(max-width:700px){.vvhr-attendance-head{flex-wrap:wrap}.vva-head-actions{width:100%}.vva-head-actions button{flex:1;font-size:11px;padding:8px 6px}}
