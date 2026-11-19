@@ -41,7 +41,11 @@ export function renderProvisioning(root, sb, options = {}) {
       if(!confirm("Create a new Employee Portal login or link an existing account matching this employee's work email?"))return;
       b.disabled=true;b.textContent="Linking…";msg.textContent="";
       const res=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:b.dataset.link}});
-      if(res.error||!res.data?.success){msg.textContent="Login linking failed: "+(res.error?.message||res.data?.error||"Unknown error");b.disabled=false;b.textContent="Create / Link Login";return;}
+      if(res.error||!res.data?.success){
+        if(res.data?.temporary_password)window.prompt("A login was created but linking needs a retry. Save this one-time temporary password securely for "+(res.data.employee_code||"the employee")+".",res.data.temporary_password);
+        msg.textContent="Login linking failed: "+(res.error?.message||res.data?.error||"Unknown error")+(res.data?.account_created?" A login was created; save the temporary password and retry linking after resolving the issue.":"");
+        b.disabled=false;b.textContent="Create / Link Login";return;
+      }
       if(res.data.temporary_password){
         window.prompt("One-time temporary password for "+res.data.employee_code+". Copy it now and share privately with the employee.",res.data.temporary_password);
         msg.textContent="Login created and linked. The employee must change the temporary password after first sign-in.";
