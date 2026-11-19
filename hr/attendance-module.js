@@ -109,7 +109,12 @@ export function renderAttendanceModule(root, sb, options = {}) {
       const records=monthlyAttendance.filter(a=>a.employee_id===e.id);
       const count=s=>records.filter(a=>a.status===s).length;
       const present=count("present"),half=count("half_day"),absent=count("absent"),paid=count("paid_leave"),unpaid=count("unpaid_leave"),off=count("weekly_off"),holiday=count("holiday");
-      const employeeWorkingDays=Math.max(0,workingDays-off-holiday);\n      const percentage=employeeWorkingDays?Math.min(100,((present+half*.5)/employeeWorkingDays)*100):0;
+      const weekdayRecords=records.filter(a=>new Date(a.attendance_date+"T00:00:00").getDay()!==0);
+      const weekdayPresent=weekdayRecords.filter(a=>a.status==="present").length;
+      const weekdayHalf=weekdayRecords.filter(a=>a.status==="half_day").length;
+      const weekdayOffAndHoliday=weekdayRecords.filter(a=>a.status==="weekly_off"||a.status==="holiday").length;
+      const employeeWorkingDays=Math.max(0,workingDays-weekdayOffAndHoliday);
+      const percentage=employeeWorkingDays?Math.min(100,((weekdayPresent+weekdayHalf*.5)/employeeWorkingDays)*100):0;
       return {e,present,half,absent,paid,unpaid,off,holiday,percentage,records};
     });
     monthStats.innerHTML=[["Employees",filtered.length],["Present Days",summaries.reduce((n,x)=>n+x.present,0)],["Absent Days",summaries.reduce((n,x)=>n+x.absent,0)],["Half Days",summaries.reduce((n,x)=>n+x.half,0)],["Paid Leaves",summaries.reduce((n,x)=>n+x.paid,0)],["Avg. Attendance",filtered.length?(summaries.reduce((n,x)=>n+x.percentage,0)/filtered.length).toFixed(1)+"%":"0%"]].map(([l,n])=>'<div><small>'+l+'</small><b>'+n+'</b></div>').join("");
@@ -122,7 +127,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
     const filtered=employees.filter(e=>(!dept||e.department===dept)&&(!q||[e.employee_code,e.full_name,e.department].join(" ").toLowerCase().includes(q)));
     const map=new Map(monthlyAttendance.map(a=>[a.employee_id+"|"+a.attendance_date,a]));
     const rows=[["Month","Employee Code","Employee Name","Department",...Array.from({length:days},(_,i)=>String(i+1)), "Present","Half Day","Absent","Paid Leave","Unpaid Leave","Weekly Off","Holiday","Attendance %"]];
-    filtered.forEach(e=>{const records=monthlyAttendance.filter(a=>a.employee_id===e.id),count=s=>records.filter(a=>a.status===s).length,p=count("present"),h=count("half_day"),working=Array.from({length:days},(_,i)=>i+1).filter(d=>new Date(year,month-1,d).getDay()!==0).length,employeeWorking=Math.max(0,working-count("weekly_off")-count("holiday"));rows.push([monthEl.value,e.employee_code,e.full_name,e.department,...Array.from({length:days},(_,i)=>{const a=map.get(e.id+"|"+(monthEl.value+"-"+String(i+1).padStart(2,"0")));return a?statusShort[a.status]||a.status:"";}),p,h,count("absent"),count("paid_leave"),count("unpaid_leave"),count("weekly_off"),count("holiday"),employeeWorking?(((p+h*.5)/employeeWorking)*100).toFixed(1):"0"]);});
+    filtered.forEach(e=>{const records=monthlyAttendance.filter(a=>a.employee_id===e.id),count=s=>records.filter(a=>a.status===s).length,p=count("present"),h=count("half_day"),working=Array.from({length:days},(_,i)=>i+1).filter(d=>new Date(year,month-1,d).getDay()!==0).length,employeeWorking=Math.max(0,working-count("weekly_off")-count("holiday"));rows.push([monthEl.value,e.employee_code,e.full_name,e.department,...Array.from({length:days},(_,i)=>{const a=map.get(e.id+"|"+(monthEl.value+"-"+String(i+1).padStart(2,"0")));return a?statusShort[a.status]||a.status:"";}),p,h,count("absent"),count("paid_leave"),count("unpaid_leave"),count("weekly_off"),count("holiday"),employeeWorking?(((weekdayPresent+weekdayHalf*.5)/employeeWorking)*100).toFixed(1):"0"]);});
     const cell=v=>{let x=String(v??"");if(/^\\s*[=+\\-@]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
     const csv=rows.map(r=>r.map(cell).join(",")).join("\\r\\n"),url=URL.createObjectURL(new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download="VermiVeda_Monthly_Attendance_"+monthEl.value+".csv";a.click();URL.revokeObjectURL(url);
   }
@@ -144,7 +149,11 @@ export function renderAttendanceModule(root, sb, options = {}) {
     draw();
     foot.textContent="Saved attendance for "+(employees.find(e=>e.id===employeeId)?.full_name||"employee")+".";
   }
-  root.querySelector("#vva-refresh").onclick=()=>activeView==="monthly"?loadMonthly():load();\n  root.querySelector("#vva-daily-tab").onclick=()=>showView("daily");\n  root.querySelector("#vva-monthly-tab").onclick=()=>showView("monthly");\n  monthEl.onchange=loadMonthly;monthDept.onchange=drawMonthly;monthSearch.oninput=drawMonthly;\n  root.querySelector("#vva-month-export").onclick=exportMonthly;
+  root.querySelector("#vva-refresh").onclick=()=>activeView==="monthly"?loadMonthly():load();
+  root.querySelector("#vva-daily-tab").onclick=()=>showView("daily");
+  root.querySelector("#vva-monthly-tab").onclick=()=>showView("monthly");
+  monthEl.onchange=loadMonthly;monthDept.onchange=drawMonthly;monthSearch.oninput=drawMonthly;
+  root.querySelector("#vva-month-export").onclick=exportMonthly;
   dateEl.onchange=load;deptEl.onchange=draw;searchEl.oninput=draw;
   root.querySelector("#vva-export").onclick=()=>{
     const rows=[["Date","Employee Code","Name","Department","Status","Check In","Check Out","Late Minutes","Overtime Minutes","Remarks"],
