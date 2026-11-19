@@ -47,7 +47,7 @@ export function renderLeaveModule(root, sb, options = {}) {
     const approved=requests.filter(r=>r.status==="approved").length;
     const rejected=requests.filter(r=>r.status==="rejected").length;
     const stats='<div class="vvl-stats"><div><small>Total Requests</small><b>'+requests.length+'</b></div><div><small>Pending Approval</small><b>'+pending+'</b></div><div><small>Approved</small><b>'+approved+'</b></div><div><small>Rejected</small><b>'+rejected+'</b></div></div>';
-    content.innerHTML=stats+tabButtons()+(activeTab==="requests"?requestsAdminHtml():balancesAdminHtml());
+    content.innerHTML=stats+tabButtons()+(activeTab==="requests"?requestsAdminHtml():activeTab==="balances"?balancesAdminHtml():"");
     content.querySelectorAll("[data-vvl-tab]").forEach(b=>b.onclick=()=>{activeTab=b.dataset.vvlTab;renderAdmin();});
     if(activeTab==="requests")bindAdminRequests();
     if(activeTab==="balances")bindBalances();
