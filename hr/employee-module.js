@@ -19,7 +19,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <div class="vvhr-toolbar">
         <input id="vvhr-search" placeholder="Search employee, code, phone or department…">
         <select id="vvhr-status"><option value="">All statuses</option><option value="active">Active</option><option value="probation">Probation</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select>
-        <button class="alt" id="vvhr-export">Export CSV</button>
+        <button class="alt" id="vvhr-export">Export CSV</button><button class="alt" id="vvhr-bank-export">Salary Bank Report</button>
       </div>
       <div class="vvhr-tablewrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Monthly Salary</th><th>Status</th><th>Action</th></tr></thead><tbody id="vvhr-body"></tbody></table></div>
       <div class="vvhr-foot" id="vvhr-count"></div>
@@ -68,6 +68,10 @@ export function renderEmployeeModule(root, sb, options = {}) {
             <label>Department<input name="department" value="${value("department")}"></label>
             <label>Designation<input name="designation" value="${value("designation")}"></label>
             <label>Monthly Salary (₹)<input name="monthly_fixed_salary" type="number" min="0" step="0.01" value="${value("monthly_fixed_salary")}"></label>
+            <div class="wide vvhr-bank-section"><h4>Bank Account Details <span>For salary / NEFT payment</span></h4></div>
+            <label>Account Holder Name *<input name="bank_account_name" required autocomplete="off" value="${value("bank_account_name")}" placeholder="As per bank records"></label>
+            <label>Bank Account Number *<input name="bank_account_number" required inputmode="numeric" autocomplete="off" value="${value("bank_account_number")}" placeholder="Enter account number"></label>
+            <label>IFSC Code *<input name="bank_ifsc" required autocapitalize="characters" value="${value("bank_ifsc")}" placeholder="e.g. SBIN0001234"></label>
             <label>Status<select name="employment_status"><option value="active" ${e?.employment_status==="active"?"selected":""}>Active</option><option value="probation" ${e?.employment_status==="probation"?"selected":""}>Probation</option><option value="resigned" ${e?.employment_status==="resigned"?"selected":""}>Resigned</option><option value="terminated" ${e?.employment_status==="terminated"?"selected":""}>Terminated</option></select></label>
             <label class="wide">Address<textarea name="address" rows="2">${value("address")}</textarea></label>
             <label class="wide">Notes<textarea name="notes" rows="2">${value("notes")}</textarea></label>
@@ -81,7 +85,11 @@ export function renderEmployeeModule(root, sb, options = {}) {
     modal.querySelector("#vvhr-form").onsubmit=async ev=>{
       ev.preventDefault();
       const f=new FormData(ev.target);
-      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),email:f.get("email").trim()||null,joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null};
+      const accountNumber=f.get("bank_account_number").trim().replace(/\s+/g,"");
+      const ifsc=f.get("bank_ifsc").trim().toUpperCase();
+      if(!/^[0-9]{6,20}$/.test(accountNumber)){modal.querySelector("#vvhr-error").textContent="Please enter a valid bank account number (6–20 digits).";return;}
+      if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)){modal.querySelector("#vvhr-error").textContent="Please enter a valid 11-character IFSC code.";return;}
+      const data={full_name:f.get("full_name").trim(),mobile:f.get("mobile").trim(),email:f.get("email").trim()||null,joining_date:f.get("joining_date"),department:f.get("department").trim()||null,designation:f.get("designation").trim()||null,monthly_fixed_salary:Number(f.get("monthly_fixed_salary")||0),employment_status:f.get("employment_status"),address:f.get("address").trim()||null,notes:f.get("notes").trim()||null,bank_account_name:f.get("bank_account_name").trim(),bank_account_number:accountNumber,bank_ifsc:ifsc};
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
       let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data).select("id,employee_code,email").single();}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
@@ -93,10 +101,22 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-status").onchange=draw;
   root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
   root.querySelector("#vvhr-export").onclick=()=>{
-    const csvRows=[["Employee ID","Name","Mobile","Email","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
+    const csvRows=[["Employee Code","Employee Name","Mobile","Email","Department","Designation","Joining Date","Monthly Salary (INR)","Employment Status","Bank Account Holder","Bank Account Number","IFSC Code","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.bank_account_name,e.bank_account_number,e.bank_ifsc,e.address])];
     const csvCell=v=>{let s=String(v??"");if(/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
     const csv=csvRows.map(row=>row.map(csvCell).join(",")).join("\n");
     const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="VermiVeda_Employees.csv";a.click();
+  };
+  root.querySelector("#vvhr-bank-export").onclick=()=>{
+    const eligible=rows.filter(e=>["active","probation"].includes(e.employment_status));
+    const missing=eligible.filter(e=>!e.bank_account_name||!e.bank_account_number||!e.bank_ifsc);
+    if(missing.length&&!confirm(missing.length+" active/probation employee(s) have incomplete bank details and will be excluded. Download completed records only?"))return;
+    const csvRows=[["Employee Code","Employee Name","Department","Designation","Bank Account Holder Name","Bank Account Number","IFSC Code","Monthly Salary (INR)","Employment Status"],...eligible.filter(e=>e.bank_account_name&&e.bank_account_number&&e.bank_ifsc).map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.bank_account_name,e.bank_account_number,e.bank_ifsc,e.monthly_fixed_salary,e.employment_status])];
+    if(csvRows.length===1){alert("No active/probation employees have complete bank details.");return;}
+    const csvCell=v=>{let x=String(v??"");if(/^\\s*[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+    const csv="\\uFEFF"+csvRows.map(row=>row.map(csvCell).join(",")).join("\\r\\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="VermiVeda_Salary_Bank_Report_"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(url);
+    alert("Downloaded "+(csvRows.length-1)+" employee records. "+missing.length+" incomplete records excluded.");
   };
   load();
 }
