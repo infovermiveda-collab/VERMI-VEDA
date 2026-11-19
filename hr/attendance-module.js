@@ -128,7 +128,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
     const map=new Map(monthlyAttendance.map(a=>[a.employee_id+"|"+a.attendance_date,a]));
     const rows=[["Month","Employee Code","Employee Name","Department",...Array.from({length:days},(_,i)=>String(i+1)), "Present","Half Day","Absent","Paid Leave","Unpaid Leave","Weekly Off","Holiday","Attendance %"]];
     filtered.forEach(e=>{const records=monthlyAttendance.filter(a=>a.employee_id===e.id),count=s=>records.filter(a=>a.status===s).length,p=count("present"),h=count("half_day"),working=Array.from({length:days},(_,i)=>i+1).filter(d=>new Date(year,month-1,d).getDay()!==0).length,employeeWorking=Math.max(0,working-count("weekly_off")-count("holiday"));rows.push([monthEl.value,e.employee_code,e.full_name,e.department,...Array.from({length:days},(_,i)=>{const a=map.get(e.id+"|"+(monthEl.value+"-"+String(i+1).padStart(2,"0")));return a?statusShort[a.status]||a.status:"";}),p,h,count("absent"),count("paid_leave"),count("unpaid_leave"),count("weekly_off"),count("holiday"),employeeWorking?(((weekdayPresent+weekdayHalf*.5)/employeeWorking)*100).toFixed(1):"0"]);});
-    const cell=v=>{let x=String(v??"");if(/^\\s*[=+\\-@]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+    const cell=v=>{let x=String(v??"");if(/^\s*[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
     const csv=rows.map(r=>r.map(cell).join(",")).join("\\r\\n"),url=URL.createObjectURL(new Blob(["\\ufeff"+csv],{type:"text/csv;charset=utf-8"})),a=document.createElement("a");a.href=url;a.download="VermiVeda_Monthly_Attendance_"+monthEl.value+".csv";a.click();URL.revokeObjectURL(url);
   }
   async function saveRow(tr){
