@@ -35,11 +35,14 @@ create index if not exists vvhr_leave_requests_status_idx on public.vvhr_leave_r
 create index if not exists vvhr_leave_balances_employee_year_idx on public.vvhr_leave_balances(employee_id, leave_year);
 create or replace function public.vvhr_prepare_leave_request()
 returns trigger language plpgsql set search_path = public as $$
-declare overlap_count integer;
+declare
+ overlap_count integer;
+ working_day_count integer;
 begin
  if new.end_date < new.start_date then raise exception 'End date cannot be earlier than start date'; end if;
  if extract(year from new.start_date) <> extract(year from new.end_date) then raise exception 'A leave request must be within one calendar year'; end if;
- select count(*) into new.requested_days from generate_series(new.start_date::timestamp,new.end_date::timestamp,interval '1 day') as days(day) where extract(dow from day) <> 0;
+ select count(*) into working_day_count from generate_series(new.start_date::timestamp,new.end_date::timestamp,interval '1 day') as days(day) where extract(dow from day) <> 0;
+ new.requested_days := working_day_count;
  if new.requested_days <= 0 then raise exception 'Selected dates contain no working days (Sunday is weekly off)'; end if;
  if new.status in ('pending','approved') then
   select count(*) into overlap_count from public.vvhr_leave_requests r where r.employee_id=new.employee_id and r.id is distinct from new.id and r.status in ('pending','approved') and daterange(r.start_date,r.end_date,'[]') && daterange(new.start_date,new.end_date,'[]');
