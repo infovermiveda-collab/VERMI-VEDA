@@ -23,7 +23,18 @@ export function renderAttendanceModule(root, sb, options = {}) {
       <div class="vvhr-attendance-stats" id="vva-stats"></div>
       <div class="vvhr-attendance-note">Choose a status for each employee. Changes are saved per employee; unmarked employees remain unmarked.</div>
       <div class="vvhr-attendance-table"><table><thead><tr><th>Employee</th><th>Department</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Late (min)</th><th>OT (min)</th><th>Remarks</th><th>Save</th></tr></thead><tbody id="vva-body"></tbody></table></div>
-      <p class="vvhr-attendance-foot" id="vva-foot"></p>
+      <p class="vvhr-attendance-foot" id="vva-foot"></p></div>
+      <section id="vva-monthly-panel" hidden>
+        <div class="vvhr-attendance-filters">
+          <label>Attendance Month<input id="vva-month" type="month" value="${localDate().slice(0,7)}"></label>
+          <label>Department<select id="vva-month-dept"><option value="">All Departments</option></select></label>
+          <label>Search Employee<input id="vva-month-search" placeholder="Name or employee code"></label>
+          <button class="alt" id="vva-month-export">Export Monthly CSV</button>
+        </div>
+        <div class="vvhr-attendance-stats" id="vva-month-stats"></div>
+        <div class="vvhr-attendance-table"><table><thead id="vva-month-head"></thead><tbody id="vva-month-body"></tbody></table></div>
+        <p class="vvhr-attendance-foot" id="vva-month-foot"></p>
+      </section>
     </section>`;
   const dateEl=root.querySelector("#vva-date"), deptEl=root.querySelector("#vva-dept"), searchEl=root.querySelector("#vva-search"), body=root.querySelector("#vva-body"), stats=root.querySelector("#vva-stats"), foot=root.querySelector("#vva-foot");
   const dailyPanel=root.querySelector("#vva-daily-panel"), monthlyPanel=root.querySelector("#vva-monthly-panel");
