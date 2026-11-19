@@ -45,7 +45,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <td>${canManage ? `<div class="actions"><button class="alt vvhr-edit" data-id="${escapeHtml(e.id)}">Edit</button><button class="alt vvhr-offer" data-id="${escapeHtml(e.id)}">Offer Letter</button></div>` : "—"}</td></tr>`).join("") : '<tr><td colspan="10" class="vvhr-empty">No employee records found.</td></tr>';
     root.querySelector("#vvhr-count").textContent = `Showing ${filtered.length} of ${rows.length} employees`;
     body.querySelectorAll(".vvhr-edit").forEach(b=>b.onclick=()=>openForm(rows.find(e=>e.id===b.dataset.id)));
-    body.querySelectorAll(".vvhr-offer").forEach(b=>b.onclick=async()=>{const row=rows.find(e=>e.id===b.dataset.id);b.disabled=true;b.textContent="Generating…";const r=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:row.id}});if(r.error||!r.data?.success){alert("Offer letter could not be generated: "+(r.error?.message||r.data?.error||"Unknown error"));b.disabled=false;b.textContent="Offer Letter";return;}alert("Offer letter uploaded to Employee Portal for "+row.employee_code+".");b.disabled=false;b.textContent="Offer Letter";});
+    body.querySelectorAll(".vvhr-offer").forEach(b=>b.onclick=async()=>{const row=rows.find(e=>e.id===b.dataset.id);b.disabled=true;b.textContent="Generating…";const r=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:row.id}});if(r.error||!r.data?.success){alert("Offer letter could not be generated: "+(r.error?.message||r.data?.error||"Unknown error"));b.disabled=false;b.textContent="Offer Letter";return;}let note="Offer letter uploaded for "+row.employee_code+".";if(row.email){const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:row.id}});if(account.error||!account.data?.success)note+=" Portal login needs follow-up: "+(account.error?.message||account.data?.error||"Unknown error");else if(account.data.temporary_password)window.prompt("Employee Portal temporary password — share securely with the employee.",account.data.temporary_password);}alert(note);b.disabled=false;b.textContent="Offer Letter";});
   };
   async function load() {
     const r = await sb.from("vvhr_employees").select("*").order("employee_code",{ascending:true});
@@ -63,7 +63,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
         <form id="vvhr-form">
           <div class="vvhr-formgrid">
             <label>Full Name *<input name="full_name" required value="${value("full_name")}"></label>
-            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>\n            <label>Email *<input name="email" type="email" required value="${value("email")}"></label>
+            <label>Mobile *<input name="mobile" required inputmode="tel" value="${value("mobile")}"></label>\n            <label>Email *<input name="email" type="email" ${e?"":"required"} value="${value("email")}"></label>
             <label>Joining Date *<input name="joining_date" required type="date" value="${value("joining_date")}"></label>
             <label>Department<input name="department" value="${value("department")}"></label>
             <label>Designation<input name="designation" value="${value("designation")}"></label>
