@@ -84,6 +84,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
       if(r.status==="travel")summary.travel++;
       if(Number(r.late_minutes)>0)summary.late++;
     });
+    summary.weeklyOff += Array.from({length:days},(_,i)=>i+1).filter(d=>new Date(year,month,d).getDay()===0&&!byDate.has(dateKey(d))).length;
     setLegend(summary);
     const cells=[];
     for(let i=0;i<offset;i++)cells.push('<div class="vvac-day vvac-day-blank"></div>');
