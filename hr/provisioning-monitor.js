@@ -49,6 +49,8 @@ export function renderProvisioning(root, sb, options = {}) {
         msg.textContent="Existing login linked successfully. The employee's current password has not been changed.";
       }
       await load();
+      if(res.data.temporary_password) msg.textContent="Login created and linked for "+res.data.employee_code+". Temporary password was shown once; employee must change it after first sign-in.";
+      else msg.textContent="Existing login linked successfully for "+res.data.employee_code+". Existing password unchanged.";
     });
   }
   root.querySelector("#pr-refresh").onclick=load;
