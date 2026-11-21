@@ -128,10 +128,10 @@ export function renderEmployeeModule(root, sb, options = {}) {
     if(missing.length&&!confirm(missing.length+" active/probation employee(s) have incomplete bank details and will be excluded. Download completed records only?"))return;
     const csvRows=[["Employee Code","Employee Name","Department","Designation","Bank Account Holder Name","Bank Account Number","IFSC Code","Monthly Salary (INR)","Employment Status"],...eligible.filter(e=>e.bank_account_name&&e.bank_account_number&&e.bank_ifsc).map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.bank_account_name,e.bank_account_number,e.bank_ifsc,e.monthly_fixed_salary,e.employment_status])];
     if(csvRows.length===1){alert("No active/probation employees have complete bank details.");return;}
-    const csvCell=v=>{let x=String(v??"");if(/^\\s*[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
-    const csv="\\uFEFF"+csvRows.map(row=>row.map(csvCell).join(",")).join("\\r\\n");
+    const csvCell=v=>{let x=String(v??"");if(/^\s*[=+\-@]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"';};
+    const csv="\uFEFF"+csvRows.map(row=>row.map(csvCell).join(",")).join("\r\n");
     const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download="VermiVeda_Salary_Bank_Report_"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(url);
+    a.href=url;a.download="VermiVeda_Salary_Bank_Report_"+new Date().toISOString().slice(0,10)+".csv";a.style.display="none";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
     alert("Downloaded "+(csvRows.length-1)+" employee records. "+missing.length+" incomplete records excluded.");
   };
   load();
