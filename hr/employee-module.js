@@ -84,7 +84,8 @@ export function renderEmployeeModule(root, sb, options = {}) {
                 <label>PAN Card<input type="file" name="doc_pan_card" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
                 <label>Bank Proof<input type="file" name="doc_bank_proof" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
                 <label>Resume<input type="file" name="doc_resume" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
-                <label>Joining Form<input type="file" name="doc_joining_form" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>\n                <label>Employee Photo (JPG/PNG)<input type="file" name="doc_employee_photo" accept=".jpg,.jpeg,.png" capture="user"></label>
+                <label>Joining Form<input type="file" name="doc_joining_form" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>Employee Photo (JPG/PNG)<input type="file" name="doc_employee_photo" accept=".jpg,.jpeg,.png" capture="user"></label>
               </div>
               <div id="vvhr-existing-docs"><small>${e?"Loading previously uploaded documents…":"Documents will be linked after the employee record is saved."}</small></div>
             </section>
@@ -153,7 +154,8 @@ export function renderEmployeeModule(root, sb, options = {}) {
       if(!file||!file.size)continue;
       if(file.size>8*1024*1024){errors.push(type.replaceAll("_"," ")+": file exceeds 8 MB");continue;}
       const allowed=["application/pdf","image/jpeg","image/png","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-      if(type==="employee_photo"&&!["image/jpeg","image/png"].includes(file.type)){errors.push("employee photo: upload JPG or PNG only");continue;}\n      if(!allowed.includes(file.type)){errors.push(type.replaceAll("_"," ")+": unsupported file type");continue;}
+      if(type==="employee_photo"&&!["image/jpeg","image/png"].includes(file.type)){errors.push("employee photo: upload JPG or PNG only");continue;}
+      if(!allowed.includes(file.type)){errors.push(type.replaceAll("_"," ")+": unsupported file type");continue;}
       const cleanName=file.name.replace(/[^A-Za-z0-9._-]/g,"_").slice(-100);
       const path=employeeId+"/"+type+"/"+Date.now()+"_"+cleanName;
       const storage=sb.storage.from("vvhr-employee-documents");
