@@ -18,8 +18,9 @@ export function renderPayrollModule(root, sb, options = {}) {
     const t=totals(), locked=["approved","paid","locked"].includes(period.status);
     $("vvp-status").textContent=String(period.status||"draft").toUpperCase();
     $("vvp-days").value=period.working_days;
-    $("vvp-work").innerHTML='<div class="vvp-stats"><div><small>Employees</small><b>'+t.head+'</b></div><div><small>Gross Salary</small><b>'+money(t.gross)+'</b></div><div><small>Net Payable</small><b>'+money(t.net)+'</b></div><div><small>Paid Employees</small><b>'+t.paid+'</b></div></div><div class="vvp-card"><div class="vvp-head"><div><h3>Employee Salary Register</h3><p class="vvp-muted">Enter attendance-adjusted paid days, allowances, incentives and deductions.</p></div><span class="vvp-pill">'+esc(period.payroll_month)+'</span></div><div class="vvp-note">Payroll is not a bank payment. Review all figures and bank details before approval. Approved payroll appears in employee Payslips.</div><div class="vvp-table-wrap"><table><thead><tr><th>Employee</th><th>Fixed Salary</th><th>Paid Days</th><th>Unpaid Days</th><th>Earned Salary</th><th>Allowance</th><th>Incentive</th><th>Deduction</th><th>Net Payable</th><th>Payment</th></tr></thead><tbody>'+items.map((x,i)=>'<tr><td><b>'+esc(x.employee_code)+'</b><br>'+esc(x.full_name)+'</td><td>'+money(x.fixed_salary)+'</td><td><input data-i="'+i+'" data-k="paid_days" type="number" min="0" max="'+Number(period.working_days)+'" step=".5" value="'+Number(x.paid_days)+'" '+(locked?'disabled':'')+'></td><td>'+Number(x.unpaid_days||0).toFixed(1)+'</td><td>'+money(x.earned_fixed_salary)+'</td><td><input data-i="'+i+'" data-k="allowances" type="number" min="0" step=".01" value="'+Number(x.allowances||0)+'" '+(locked?'disabled':'')+'></td><td><input data-i="'+i+'" data-k="incentives" type="number" min="0" step=".01" value="'+Number(x.incentives||0)+'" '+(locked?'disabled':'')+'></td><td><input data-i="'+i+'" data-k="deductions" type="number" min="0" step=".01" value="'+Number(x.deductions||0)+'" '+(locked?'disabled':'')+'></td><td><b>'+money(x.net_payable)+'</b></td><td>'+esc(x.payment_status||"pending")+'</td></tr>').join("")+'</tbody></table></div><div class="vvp-actions">'+(!locked?'<button id="vvp-save">Save Payroll Draft</button><button class="alt" id="vvp-generate">Generate / Refresh Employees</button>':'')+(period.status==="generated"?'<button id="vvp-approve">Approve Payroll & Publish Payslips</button>':'')+(["approved","paid"].includes(period.status)?'<button class="alt" id="vvp-bank">Download Bank Payment CSV</button><button class="alt" id="vvp-paid">Mark All as Paid</button>':'')+'<button class="alt" id="vvp-csv">Download Salary Register CSV</button></div></div>';
+    $("vvp-work").innerHTML='<div class="vvp-stats"><div><small>Employees</small><b>'+t.head+'</b></div><div><small>Gross Salary</small><b>'+money(t.gross)+'</b></div><div><small>Net Payable</small><b>'+money(t.net)+'</b></div><div><small>Paid Employees</small><b>'+t.paid+'</b></div></div><div class="vvp-card"><div class="vvp-head"><div><h3>Employee Salary Register</h3><p class="vvp-muted">Import attendance and approved leave, then review paid days, allowances, incentives and deductions.</p></div><span class="vvp-pill">'+esc(period.payroll_month)+'</span></div><div class="vvp-note">Import uses recorded attendance and approved leave only. Unmarked working dates are not assumed present; review the attendance summary and adjust paid days where needed. Payroll approval publishes payslips but does not transfer money.</div><div class="vvp-table-wrap"><table><thead><tr><th>Employee</th><th>Fixed Salary</th><th>Paid Days</th><th>Attendance Summary</th><th>Unpaid Days</th><th>Earned Salary</th><th>Allowance</th><th>Incentive</th><th>Deduction</th><th>Net Payable</th><th>Payment</th></tr></thead><tbody>'+items.map((x,i)=>'<tr><td><b>'+esc(x.employee_code)+'</b><br>'+esc(x.full_name)+'</td><td>'+money(x.fixed_salary)+'</td><td><input data-i="'+i+'" data-k="paid_days" type="number" min="0" max="'+Number(period.working_days)+'" step=".5" value="'+Number(x.paid_days)+'" '+(locked?'disabled':'')+'></td><td class="vvp-attn-summary">'+(x.attendance_summary?esc(x.attendance_summary):'<span class="vvp-muted">Not imported</span>')+'</td><td>'+Number(x.unpaid_days||0).toFixed(1)+'</td><td>'+money(x.earned_fixed_salary)+'</td><td><input data-i="'+i+'" data-k="allowances" type="number" min="0" step=".01" value="'+Number(x.allowances||0)+'" '+(locked?'disabled':'')+'></td><td><input data-i="'+i+'" data-k="incentives" type="number" min="0" step=".01" value="'+Number(x.incentives||0)+'" '+(locked?'disabled':'')+'></td><td><input data-i="'+i+'" data-k="deductions" type="number" min="0" step=".01" value="'+Number(x.deductions||0)+'" '+(locked?'disabled':'')+'></td><td><b>'+money(x.net_payable)+'</b></td><td>'+esc(x.payment_status||"pending")+'</td></tr>').join("")+'</tbody></table></div><div class="vvp-actions">'+(!locked?'<button id="vvp-attendance" class="alt">Import Attendance & Approved Leave</button><button id="vvp-save">Save Payroll Draft</button><button class="alt" id="vvp-generate">Generate / Refresh Employees</button>':'')+(period.status==="generated"?'<button id="vvp-approve">Approve Payroll & Publish Payslips</button>':'')+(["approved","paid"].includes(period.status)?'<button class="alt" id="vvp-bank">Download Bank Payment CSV</button><button class="alt" id="vvp-paid">Mark All as Paid</button>':'')+'<button class="alt" id="vvp-csv">Download Salary Register CSV</button></div></div>';
     root.querySelectorAll("[data-i]").forEach(inp=>inp.addEventListener("change",()=>{const x=items[Number(inp.dataset.i)],k=inp.dataset.k;x[k]=Math.max(0,Number(inp.value||0));recalc(x);render();}));
+    $("vvp-attendance")?.addEventListener("click",()=>run(importAttendance));
     $("vvp-save")?.addEventListener("click",saveDraft);
     $("vvp-generate")?.addEventListener("click",generateEmployees);
     $("vvp-approve")?.addEventListener("click",approve);
@@ -40,6 +41,50 @@ export function renderPayrollModule(root, sb, options = {}) {
   async function loadItems(){
     const r=await sb.from("vvhr_payroll_items").select("*,vvhr_employees!inner(employee_code,full_name,department,designation,employment_status,bank_account_name,bank_account_number,bank_ifsc)").eq("payroll_period_id",period.id).order("created_at");
     if(r.error)throw r.error;items=(r.data||[]).map(x=>({...x,employee_code:x.vvhr_employees.employee_code,full_name:x.vvhr_employees.full_name,department:x.vvhr_employees.department,designation:x.vvhr_employees.designation,bank_account_name:x.vvhr_employees.bank_account_name,bank_account_number:x.vvhr_employees.bank_account_number,bank_ifsc:x.vvhr_employees.bank_ifsc}));
+  }
+  async function importAttendance(){
+    if(!period||["approved","paid","locked"].includes(period.status))return;
+    const ids=items.map(x=>x.employee_id).filter(Boolean);
+    if(!ids.length){alert("Generate the employee salary register first.");return;}
+    const [ar,lr]=await Promise.all([
+      sb.from("vvhr_attendance").select("employee_id,attendance_date,status").in("employee_id",ids).gte("attendance_date",period.period_start).lte("attendance_date",period.period_end),
+      sb.from("vvhr_leave_requests").select("employee_id,leave_type,start_date,end_date,requested_days").in("employee_id",ids).eq("status","approved").lte("start_date",period.period_end).gte("end_date",period.period_start)
+    ]);
+    if(ar.error)throw ar.error;if(lr.error)throw lr.error;
+    const attendanceByEmployee=new Map(),leaveByEmployee=new Map();
+    (ar.data||[]).forEach(r=>{if(!attendanceByEmployee.has(r.employee_id))attendanceByEmployee.set(r.employee_id,new Map());attendanceByEmployee.get(r.employee_id).set(r.attendance_date,r);});
+    (lr.data||[]).forEach(r=>{if(!leaveByEmployee.has(r.employee_id))leaveByEmployee.set(r.employee_id,[]);leaveByEmployee.get(r.employee_id).push(r);});
+    let totalUnmarked=0;
+    for(const x of items){
+      const dayMap=attendanceByEmployee.get(x.employee_id)||new Map(),leaves=leaveByEmployee.get(x.employee_id)||[];
+      const counts={present:0,half:0,paidLeave:0,absent:0,unpaidLeave:0,unmarked:0},cursor=new Date(period.period_start+"T12:00:00"),last=new Date(period.period_end+"T12:00:00");
+      let paid=0;
+      while(cursor<=last){
+        const date=cursor.getFullYear()+"-"+String(cursor.getMonth()+1).padStart(2,"0")+"-"+String(cursor.getDate()).padStart(2,"0");
+        if(cursor.getDay()!==0){
+          const rec=dayMap.get(date);
+          if(rec){
+            if(rec.status==="present"||rec.status==="travel"){paid+=1;counts.present++;}
+            else if(rec.status==="half_day"){paid+=.5;counts.half++;}
+            else if(rec.status==="paid_leave"){paid+=1;counts.paidLeave++;}
+            else if(rec.status==="absent"){counts.absent++;}
+            else if(rec.status==="unpaid_leave"){counts.unpaidLeave++;}
+            else if(rec.status!=="weekly_off"&&rec.status!=="holiday"){counts.unmarked++;}
+          }else{
+            const leave=leaves.find(l=>l.start_date<=date&&l.end_date>=date);
+            if(leave){if(leave.leave_type==="unpaid"){counts.unpaidLeave++;}else{paid+=1;counts.paidLeave++;}}
+            else counts.unmarked++;
+          }
+        }
+        cursor.setDate(cursor.getDate()+1);
+      }
+      x.paid_days=Math.min(Number(period.working_days||0),paid);
+      x.attendance_summary="P "+counts.present+" · HD "+counts.half+" · PL "+counts.paidLeave+" · AB "+counts.absent+" · UL "+counts.unpaidLeave+" · NM "+counts.unmarked;
+      x.attendance_counts=counts;recalc(x);totalUnmarked+=counts.unmarked;
+    }
+    render();
+    if(totalUnmarked>0)alert("Attendance imported for "+items.length+" employees. "+totalUnmarked+" working dates are not marked; please verify these before saving payroll. Unmarked dates are not counted as paid.");
+    else alert("Attendance and approved leave imported. Please review each employee's paid days before saving.");
   }
   async function generateEmployees(){
     if(!period||["approved","paid","locked"].includes(period.status))return;
