@@ -99,7 +99,7 @@ export function renderPerformanceModule(root, sb, options = {}) {
     const month=$("vperf-month").value;if(!month)throw new Error("Select review month.");
     const first=month+"-01";
     const [er,rr]=await Promise.all([
-      sb.from("vvhr_employees").select("id,employee_code,full_name,department,designation,employment_status,joining_date").in("employment_status",["active","probation"]).lte("joining_date",new Date(new Date(first+"T12:00:00").getFullYear(),new Date(first+"T12:00:00").getMonth()+1,0).toISOString().slice(0,10)).order("employee_code"),
+      sb.from("vvhr_employees").select("id,employee_code,full_name,department,designation,employment_status,joining_date").in("employment_status",["active","probation"]).lte("joining_date",(()=>{const d=new Date(first+"T12:00:00");return d.getFullYear()+"-"+String(d.getMonth()+2).padStart(2,"0")+"-"+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,"0")})()).order("employee_code"),
       sb.from("vvhr_performance_reviews").select("*").eq("review_month",first)
     ]);
     if(er.error)throw er.error;if(rr.error)throw rr.error;
@@ -115,7 +115,7 @@ export function renderPerformanceModule(root, sb, options = {}) {
   }
   async function save(publish){
     if(!rows.length){alert("No employee rows to save.");return;}
-    if(publish&&!confirm("Publish these monthly performance reviews? HR will be able to revise them by saving a new draft only after changing status is enabled."))return;
+    if(publish&&!confirm("Publish these monthly performance reviews? This will mark the selected month reviews as published."))return;
     const month=$("vperf-month").value+"-01";
     const payload=rows.map(r=>{
       const t=Number(r.target_cases||0),c=Number(r.completed_cases||0),a=Number(r.audited_cases||0),e=Number(r.error_cases||0);
