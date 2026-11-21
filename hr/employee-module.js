@@ -19,7 +19,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       <div class="vvhr-toolbar">
         <input id="vvhr-search" placeholder="Search employee, code, phone or department…">
         <select id="vvhr-status"><option value="">All statuses</option><option value="active">Active</option><option value="probation">Probation</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option></select>
-        <button class="alt" id="vvhr-export">Export CSV</button><button class="alt" id="vvhr-bank-export">Salary Bank Report</button>
+        <button class="alt" id="vvhr-export">Export CSV</button><button class="alt" id="vvhr-exit-export">Exit Report</button><button class="alt" id="vvhr-bank-export">Salary Bank Report</button>
       </div>
       <div class="vvhr-tablewrap"><table><thead><tr><th>Employee ID</th><th>Name</th><th>Mobile</th><th>Email</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Monthly Salary</th><th>Status</th><th>Action</th></tr></thead><tbody id="vvhr-body"></tbody></table></div>
       <div class="vvhr-foot" id="vvhr-count"></div>
@@ -189,6 +189,12 @@ export function renderEmployeeModule(root, sb, options = {}) {
   root.querySelector("#vvhr-search").oninput=draw;
   root.querySelector("#vvhr-status").onchange=draw;
   root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
+  root.querySelector("#vvhr-exit-export").onclick=()=>{
+    const exited=rows.filter(e=>["resigned","terminated"].includes(e.employment_status));
+    const values=[["Employee Code","Employee Name","Department","Designation","Status","Resignation Date","Last Working Day","Exit Reason","Exit Approved At"],...exited.map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.employment_status,e.resignation_date,e.last_working_date,e.exit_reason,e.exit_approved_at])];
+    const csv=values.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
+    const blob=new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="VermiVeda_Employee_Exit_Report.csv";a.click();URL.revokeObjectURL(url);
+  };
   root.querySelector("#vvhr-export").onclick=()=>{
     const csvRows=[["Employee ID","Name","Mobile","Email","Department","Designation","Joining Date","Salary","Status","Address"],...rows.map(e=>[e.employee_code,e.full_name,e.mobile,e.email,e.department,e.designation,e.joining_date,e.monthly_fixed_salary,e.employment_status,e.address])];
     const csvCell=v=>{let s=String(v??"");if(/^\s*[=+@-]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
