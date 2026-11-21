@@ -93,7 +93,23 @@ export function renderEmployeeModule(root, sb, options = {}) {
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
       let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data).select("id,employee_code,email").single();}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
-      closeForm();if(!e&&result.data?.id){const letter=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:result.data.id}});if(letter.error||!letter.data?.success){alert("Employee saved, but offer letter upload failed: "+(letter.error?.message||letter.data?.error||"Unknown error"));}else if(result.data.email){const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:result.data.id}});if(account.error||!account.data?.success){alert("Offer letter uploaded. Employee Portal login needs HR follow-up: "+(account.error?.message||account.data?.error||"Unknown error"));}else if(account.data.temporary_password){window.prompt("Employee Portal temporary password — share securely with the employee.",account.data.temporary_password);}}}await load();
+      closeForm();
+      if(e && e.auth_user_id && e.employment_status!==data.employment_status){
+        const access=await sb.functions.invoke("set-employee-portal-access",{body:{employee_id:e.id,employment_status:data.employment_status}});
+        if(access.error||!access.data?.success){
+          alert("Employee record updated, and HR self-access is blocked by database policy. Auth sign-in lock could not be synced: "+(access.error?.message||access.data?.error||"Unknown error"));
+        }
+      }
+      if(!e&&result.data?.id){
+        const letter=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:result.data.id}});
+        if(letter.error||!letter.data?.success){alert("Employee saved, but offer letter upload failed: "+(letter.error?.message||letter.data?.error||"Unknown error"));}
+        if(result.data.email){
+          const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:result.data.id}});
+          if(account.error||!account.data?.success){alert("Employee saved. Employee Portal login needs HR follow-up: "+(account.error?.message||account.data?.error||"Unknown error"));}
+          else if(account.data.temporary_password){window.prompt("One-time Employee Portal password — share securely. Employee must change it at first login.",account.data.temporary_password);}
+        }
+      }
+      await load();
     };
   }
   function closeForm(){modal.hidden=true;modal.innerHTML="";editing=null;}
