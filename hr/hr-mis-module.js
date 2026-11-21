@@ -44,7 +44,7 @@ export function renderHrMisModule(root, sb, options = {}) {
   function table(title,headers,rows){return `<div class="mis-card"><h3 class="mis-section">${title}</h3><div class="mis-table-wrap"><table><thead><tr>${headers.map(h=>'<th>'+esc(h)+'</th>').join("")}</tr></thead><tbody>${rows.length?rows.map(r=>'<tr>'+r.map(v=>'<td>'+esc(v)+'</td>').join("")+'</tr>').join(""):'<tr><td colspan="'+headers.length+'">No records for this period</td></tr>'}</tbody></table></div></div>`;}
   function render(){
     const e=data.employees, active=e.filter(x=>x.employment_status==="active").length, probation=e.filter(x=>x.employment_status==="probation").length;
-    const exits=e.filter(x=>["resigned","terminated"].includes(x.employment_status));
+    const from=$("mis-from").value,to=$("mis-to").value;\n    const exits=e.filter(x=>["resigned","terminated"].includes(x.employment_status)&&((x.resignation_date||x.last_working_date||"")>=from)&&((x.resignation_date||x.last_working_date||"")<=to));
     const a=data.attendance, present=a.filter(x=>x.status==="present").length, absent=a.filter(x=>x.status==="absent").length;
     const late=a.filter(x=>num(x.late_minutes)>0).length, leave=data.leaves;
     const approved=leave.filter(x=>x.status==="approved"), pending=leave.filter(x=>x.status==="pending"), rejected=leave.filter(x=>x.status==="rejected");
@@ -106,7 +106,7 @@ export function renderHrMisModule(root, sb, options = {}) {
       ["Total Employees",e.length],
       ["Active Employees",e.filter(x=>x.employment_status==="active").length],
       ["Probation Employees",e.filter(x=>x.employment_status==="probation").length],
-      ["Exited Employees",e.filter(x=>["resigned","terminated"].includes(x.employment_status)).length],
+      ["Exited Employees in Period",e.filter(x=>["resigned","terminated"].includes(x.employment_status)&&((x.resignation_date||x.last_working_date||"")>=$("mis-from").value)&&((x.resignation_date||x.last_working_date||"")<=$("mis-to").value)).length],
       ["Attendance Records",a.length],
       ["Present Records",a.filter(x=>x.status==="present").length],
       ["Absent Records",a.filter(x=>x.status==="absent").length],
