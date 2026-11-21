@@ -75,6 +75,19 @@ export function renderEmployeeModule(root, sb, options = {}) {
             <label>Status<select name="employment_status"><option value="active" ${e?.employment_status==="active"?"selected":""}>Active</option><option value="probation" ${e?.employment_status==="probation"?"selected":""}>Probation</option><option value="resigned" ${e?.employment_status==="resigned"?"selected":""}>Resigned</option><option value="terminated" ${e?.employment_status==="terminated"?"selected":""}>Terminated</option></select></label>
             <label class="wide">Address<textarea name="address" rows="2">${value("address")}</textarea></label>
             <label class="wide">Notes<textarea name="notes" rows="2">${value("notes")}</textarea></label>
+            <section class="wide vvhr-doc-upload">
+              <h4>Employee Documents</h4>
+              <p>Upload PDF, JPG, PNG or DOCX files (maximum 8 MB per file). Documents remain private and visible only to authorised HR and the employee.</p>
+              <div class="vvhr-doc-grid">
+                <label>Aadhaar Front<input type="file" name="doc_aadhaar_front" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>Aadhaar Back<input type="file" name="doc_aadhaar_back" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>PAN Card<input type="file" name="doc_pan_card" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>Bank Proof<input type="file" name="doc_bank_proof" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>Resume<input type="file" name="doc_resume" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+                <label>Joining Form<input type="file" name="doc_joining_form" accept=".pdf,.jpg,.jpeg,.png,.docx"></label>
+              </div>
+              <div id="vvhr-existing-docs"><small>${e?"Loading previously uploaded documents…":"Documents will be linked after the employee record is saved."}</small></div>
+            </section>
           </div>
           <div class="vvhr-form-actions"><button type="submit" id="vvhr-save">Save Employee</button><button type="button" class="alt" id="vvhr-cancel">Cancel</button></div>
           <div class="vvhr-error" id="vvhr-error"></div>
@@ -82,6 +95,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
       </div>`;
     modal.querySelector("#vvhr-close").onclick=closeForm;
     modal.querySelector("#vvhr-cancel").onclick=closeForm;
+    if(e) showExistingDocuments(e.id);
     modal.querySelector("#vvhr-form").onsubmit=async ev=>{
       ev.preventDefault();
       const f=new FormData(ev.target);
@@ -93,25 +107,65 @@ export function renderEmployeeModule(root, sb, options = {}) {
       const btn=modal.querySelector("#vvhr-save"); btn.disabled=true;btn.textContent="Saving…";
       let result;if(e){result=await sb.from("vvhr_employees").update(data).eq("id",e.id);}else{result=await sb.from("vvhr_employees").insert(data).select("id,employee_code,email").single();}
       if(result.error){modal.querySelector("#vvhr-error").textContent=result.error.message;btn.disabled=false;btn.textContent="Save Employee";return;}
-      closeForm();
+      const employeeId=e?.id||result.data?.id;
+      const documentResult=await uploadEmployeeDocuments(employeeId,f);
       if(e && e.auth_user_id && e.employment_status!==data.employment_status){
         const access=await sb.functions.invoke("set-employee-portal-access",{body:{employee_id:e.id,employment_status:data.employment_status}});
         if(access.error||!access.data?.success){
           alert("Employee record updated, and HR self-access is blocked by database policy. Auth sign-in lock could not be synced: "+(access.error?.message||access.data?.error||"Unknown error"));
         }
       }
-      if(!e&&result.data?.id){
-        const letter=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:result.data.id}});
-        if(letter.error||!letter.data?.success){alert("Employee saved, but offer letter upload failed: "+(letter.error?.message||letter.data?.error||"Unknown error"));}
-        if(result.data.email){
-          const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:result.data.id}});
-          if(account.error||!account.data?.success){alert("Employee saved. Employee Portal login needs HR follow-up: "+(account.error?.message||account.data?.error||"Unknown error"));}
+      const messages=[];
+      if(documentResult.errors.length)messages.push("Some documents could not be uploaded: "+documentResult.errors.join("; "));
+      if(!e&&employeeId){
+        const letter=await sb.functions.invoke("generate-employee-offer-letter",{body:{employee_id:employeeId}});
+        if(letter.error||!letter.data?.success){messages.push("Employee saved, but offer letter could not be generated: "+(letter.error?.message||letter.data?.error||"Unknown error"));}
+        if(data.email){
+          const account=await sb.functions.invoke("provision-employee-portal-account",{body:{employee_id:employeeId}});
+          if(account.error||!account.data?.success){messages.push("Employee Portal login needs HR follow-up: "+(account.error?.message||account.data?.error||"Unknown error"));}
           else if(account.data.temporary_password){window.prompt("One-time Employee Portal password — share securely. Employee must change it at first login.",account.data.temporary_password);}
         }
       }
+      closeForm();
       await load();
+      if(documentResult.uploaded.length)messages.push(documentResult.uploaded.length+" document(s) uploaded successfully.");
+      if(messages.length)alert(messages.join("\n"));
     };
   }
+
+  async function showExistingDocuments(employeeId){
+    const host=modal.querySelector("#vvhr-existing-docs"); if(!host)return;
+    const result=await sb.from("vvhr_employee_documents").select("id,document_type,file_name,storage_path,uploaded_at").eq("employee_id",employeeId).order("uploaded_at",{ascending:false});
+    if(result.error){host.innerHTML='<small class="vvhr-doc-error">Could not load existing documents: '+escapeHtml(result.error.message)+'</small>';return;}
+    if(!result.data?.length){host.innerHTML='<small>No documents uploaded yet.</small>';return;}
+    const labels={aadhaar_front:"Aadhaar Front",aadhaar_back:"Aadhaar Back",pan_card:"PAN Card",bank_proof:"Bank Proof",resume:"Resume",joining_form:"Joining Form",employee_photo:"Employee Photo",offer_letter:"Offer Letter"};
+    const links=await Promise.all(result.data.map(async d=>{
+      const signed=await sb.storage.from("vvhr-employee-documents").createSignedUrl(d.storage_path,300,{download:d.file_name});
+      return '<div class="vvhr-doc-existing"><span><b>'+escapeHtml(labels[d.document_type]||d.document_type)+'</b><small>'+escapeHtml(d.file_name)+' · '+escapeHtml(new Date(d.uploaded_at).toLocaleDateString("en-IN"))+'</small></span>'+(signed.error?'': '<a href="'+escapeHtml(signed.data.signedUrl)+'" target="_blank" rel="noopener">Download</a>')+'</div>';
+    }));
+    host.innerHTML='<h5>Previously uploaded documents</h5>'+links.join("");
+  }
+  async function uploadEmployeeDocuments(employeeId,formData){
+    const types=["aadhaar_front","aadhaar_back","pan_card","bank_proof","resume","joining_form"];
+    const uploaded=[],errors=[];
+    for(const type of types){
+      const file=formData.get("doc_"+type);
+      if(!file||!file.size)continue;
+      if(file.size>8*1024*1024){errors.push(type.replaceAll("_"," ")+": file exceeds 8 MB");continue;}
+      const allowed=["application/pdf","image/jpeg","image/png","application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+      if(!allowed.includes(file.type)){errors.push(type.replaceAll("_"," ")+": unsupported file type");continue;}
+      const cleanName=file.name.replace(/[^A-Za-z0-9._-]/g,"_").slice(-100);
+      const path=employeeId+"/"+type+"/"+Date.now()+"_"+cleanName;
+      const storage=sb.storage.from("vvhr-employee-documents");
+      const up=await storage.upload(path,file,{contentType:file.type,upsert:false});
+      if(up.error){errors.push(type.replaceAll("_"," ")+": "+up.error.message);continue;}
+      const saved=await sb.from("vvhr_employee_documents").insert({employee_id:employeeId,document_type:type,file_name:file.name,storage_path:path});
+      if(saved.error){await storage.remove([path]);errors.push(type.replaceAll("_"," ")+": "+saved.error.message);continue;}
+      uploaded.push(type);
+    }
+    return {uploaded,errors};
+  }
+
   function closeForm(){modal.hidden=true;modal.innerHTML="";editing=null;}
   root.querySelector("#vvhr-search").oninput=draw;
   root.querySelector("#vvhr-status").onchange=draw;
