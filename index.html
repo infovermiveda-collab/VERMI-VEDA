@@ -157,26 +157,40 @@ const URL='https://ezozfdekhjdklioelgno.supabase.co', KEY='sb_publishable_yAZ3ea
 const sb=window.supabase.createClient(URL,KEY);let authUser=null,me=null,products=[],orders=[],staff=[],stocklog=[],expenses=[],deliveryEvents=[],page='dashboard';const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2}),today=()=>new Date().toISOString().slice(0,10),admin=()=>me?.role==='admin',hrRole=()=>['admin','hr'].includes(me?.role),hrOnly=()=>me?.role==='hr',employeeOnly=()=>me?.role==='employee',paid=o=>Number(o.paid_amount||0),total=o=>(o.items||[]).reduce((s,i)=>s+Number(i.qty||0)*Number(i.price||0),0)+Number(o.delivery_fee||0)-Number(o.discount||0),balance=o=>Math.max(0,total(o)-paid(o)),pBy=id=>products.find(p=>p.id===id),visOrders=()=>admin()?orders:orders.filter(o=>o.assigned_fe===authUser.id),status=s=>`<span class="pill ${['Delivered','Paid','Active'].includes(s)?'green':['Assigned','Out for Delivery','Partially Paid'].includes(s)?'orange':['Failed','Cancelled','Returned','Inactive'].includes(s)?'red':''}">${esc(s||'Pending')}</span>`;
 function login(message=''){document.body.innerHTML=`<div id="app"><div class="loginwrap"><form class="login" id="login"><div class="login-brand"><img src="/vermi-veda-logo.svg" alt="Vermi Veda logo"></div><h1>Vermi Veda OMS</h1><p>Order management & field delivery portal</p><div class="field"><label>Work email</label><input name="email" type="email" required autocomplete="username" placeholder="name@company.com"></div><div class="field"><label>Password</label><input name="password" type="password" required autocomplete="current-password"></div><button id="signIn">Sign in securely</button>${message?`<div class="error">${esc(message)}</div>`:''}<div class="footnote">Staff accounts are created by the Admin. Public registration is not available.</div><div id="err" class="error" style="display:none"></div></form></div></div>`;$('#login').onsubmit=async e=>{e.preventDefault();$('#signIn').disabled=true;const f=new FormData(e.target),r=await sb.auth.signInWithPassword({email:String(f.get('email')).trim(),password:String(f.get('password'))});if(r.error){$('#err').style.display='block';$('#err').textContent=r.error.message;$('#signIn').disabled=false;return}await start(r.data.user)}}
 async function showForcedPasswordChange(){document.body.innerHTML=`<div id="app"><div class="loginwrap"><form class="login" id="forcePassword"><h1>Change temporary password</h1><p>Your account has a temporary password. Set a new password before continuing to OMS.</p><div class="field"><label>New password</label><input name="password" type="password" minlength="10" required autocomplete="new-password"></div><div class="field"><label>Confirm password</label><input name="confirm" type="password" minlength="10" required autocomplete="new-password"></div><button id="changeBtn">Update password</button><div id="pwErr" class="error" style="display:none"></div></form></div></div>`;$('#forcePassword').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),p=String(f.get('password')),q=String(f.get('confirm'));if(p!==q){$('#pwErr').style.display='block';$('#pwErr').textContent='Passwords do not match.';return}if(p.length<10){$('#pwErr').style.display='block';$('#pwErr').textContent='Password must be at least 10 characters.';return}$('#changeBtn').disabled=true;const a=await sb.auth.updateUser({password:p});if(a.error){$('#pwErr').style.display='block';$('#pwErr').textContent=a.error.message;$('#changeBtn').disabled=false;return}const b=await sb.rpc('oms_complete_password_change');if(b.error){$('#pwErr').style.display='block';$('#pwErr').textContent='Password updated, but account setup could not finish. Please retry or contact Admin.';$('#changeBtn').disabled=false;return}await start(authUser)}}
+async function showEmployeeForcedPasswordChange(){
+ document.body.innerHTML=`<div id="app"><div class="loginwrap"><form class="login" id="employeeForcePassword"><h1>Set your new password</h1><p>This is your first Employee Portal sign-in. Please replace the temporary password before continuing.</p><div class="field"><label>New password</label><input name="password" type="password" minlength="10" required autocomplete="new-password"></div><div class="field"><label>Confirm password</label><input name="confirm" type="password" minlength="10" required autocomplete="new-password"></div><button id="employeeChangeBtn">Update password</button><div id="employeePwErr" class="error" style="display:none"></div></form></div></div>`;
+ document.querySelector('#employeeForcePassword').onsubmit=async e=>{
+  e.preventDefault();const f=new FormData(e.target),p=String(f.get('password')),q=String(f.get('confirm')),err=document.querySelector('#employeePwErr');
+  if(p!==q){err.style.display='block';err.textContent='Passwords do not match.';return}
+  if(p.length<10){err.style.display='block';err.textContent='Password must be at least 10 characters.';return}
+  const btn=document.querySelector('#employeeChangeBtn');btn.disabled=true;btn.textContent='Updating…';
+  const updated=await sb.auth.updateUser({password:p,data:{vvhr_must_change_password:false}});
+  if(updated.error){err.style.display='block';err.textContent=updated.error.message;btn.disabled=false;btn.textContent='Update password';return}
+  await start(updated.data.user);
+ };
+}
 async function start(user){
  authUser=user;
- const oms=await sb.from('oms_profiles').select('user_id,full_name,role,active').eq('user_id',user.id).maybeSingle();
- if(oms.data){
-  me=oms.data;
-  if(!me.active){await sb.auth.signOut();authUser=null;return login('Your account is inactive. Contact the administrator.')}
- }else{
-  const hr=await sb.from('vvhr_user_profiles').select('user_id,role,employee_id').eq('user_id',user.id).maybeSingle();
-  if(hr.error||!hr.data){await sb.auth.signOut();authUser=null;return login('Profile not configured. Ask the administrator to set up your account.')}
-  if(hr.data.role==='admin'){
-   me={user_id:user.id,full_name:user.email||'HR Admin',role:'hr',active:true};
-  }else if(hr.data.role==='employee'&&hr.data.employee_id){
-   const emp=await sb.from('vvhr_employees').select('id,full_name,employment_status,auth_user_id').eq('id',hr.data.employee_id).eq('auth_user_id',user.id).maybeSingle();
-   if(emp.error||!emp.data||!['active','probation'].includes(emp.data.employment_status)){
-    await sb.auth.signOut();authUser=null;return login('Your employee portal access is not active. Please contact HR/Admin.');
-   }
-   me={user_id:user.id,full_name:emp.data.full_name,role:'employee',active:true,employee_id:emp.data.id};
-  }else{
-   await sb.auth.signOut();authUser=null;return login('Your HR account is not linked to a valid employee profile.');
+ if(user.user_metadata?.vvhr_must_change_password===true){return showEmployeeForcedPasswordChange();}
+ const [omsResult,hrResult]=await Promise.all([
+  sb.from('oms_profiles').select('user_id,full_name,role,active').eq('user_id',user.id).maybeSingle(),
+  sb.from('vvhr_user_profiles').select('user_id,role,employee_id').eq('user_id',user.id).maybeSingle()
+ ]);
+ const oms=omsResult.data,hr=hrResult.data;
+ if(oms?.role==='admin'&&oms.active===true){
+  me=oms;
+ }else if(hr?.role==='admin'){
+  me={user_id:user.id,full_name:user.email||'HR Admin',role:'hr',active:true};
+ }else if(hr?.role==='employee'&&hr.employee_id){
+  const emp=await sb.from('vvhr_employees').select('id,full_name,employment_status,auth_user_id').eq('id',hr.employee_id).eq('auth_user_id',user.id).maybeSingle();
+  if(emp.error||!emp.data||!['active','probation'].includes(emp.data.employment_status)){
+   await sb.auth.signOut();authUser=null;return login('Your employee portal access is not active. Please contact HR/Admin.');
   }
+  me={user_id:user.id,full_name:emp.data.full_name,role:'employee',active:true,employee_id:emp.data.id};
+ }else if(oms?.active===true){
+  me=oms;
+ }else{
+  await sb.auth.signOut();authUser=null;return login('Profile not configured or inactive. Ask HR/Admin to verify your account.');
  }
  try{if(!hrOnly()&&!employeeOnly())await refresh();page=admin()?'workspace':hrOnly()?'hr-admin':employeeOnly()?'employee-portal':'dashboard';render()}
  catch(e){login('Database error: '+e.message)}
