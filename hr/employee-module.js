@@ -48,13 +48,13 @@ export function renderEmployeeModule(root, sb, options = {}) {
     body.querySelectorAll(".vvhr-exit").forEach(b=>b.onclick=async()=>{
       const row=rows.find(e=>e.id===b.dataset.id);if(!row)return;
       const resignationDate=prompt("Resignation date (YYYY-MM-DD)",new Date().toISOString().slice(0,10));if(!resignationDate)return;
-      const lastWorkingDate=prompt("Last working day (YYYY-MM-DD)",resignationDate);if(!lastWorkingDate)return;
+      const exitDate=prompt("Exit date / Last working day (YYYY-MM-DD)",resignationDate);if(!exitDate)return;
       const reason=prompt("Reason for resignation / exit");if(reason===null)return;
       const dateOk=v=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v));
-      if(!dateOk(resignationDate)||!dateOk(lastWorkingDate)||lastWorkingDate<resignationDate){alert("Enter valid dates. Last working day cannot be before resignation date.");return;}
+      if(!dateOk(resignationDate)||!dateOk(exitDate)||exitDate<resignationDate){alert("Enter valid dates. Exit date cannot be before resignation date.");return;}
       if(!confirm("Approve exit for "+row.full_name+" ("+row.employee_code+")? Portal access will be blocked immediately. Existing HR history will be retained."))return;
       b.disabled=true;b.textContent="Processing…";
-      const upd=await sb.from("vvhr_employees").update({employment_status:"resigned",resignation_date:resignationDate,last_working_date:lastWorkingDate,exit_reason:reason.trim()||null,exit_approved_by:options.currentUserId||null,exit_approved_at:new Date().toISOString()}).eq("id",row.id).in("employment_status",["active","probation"]).select("id").maybeSingle();
+      const upd=await sb.from("vvhr_employees").update({employment_status:"resigned",resignation_date:resignationDate,exit_date:exitDate,last_working_date:exitDate,exit_reason:reason.trim()||null,exit_approved_by:options.currentUserId||null,exit_approved_at:new Date().toISOString()}).eq("id",row.id).in("employment_status",["active","probation"]).select("id").maybeSingle();
       if(upd.error||!upd.data){alert("Exit update failed: "+(upd.error?.message||"Employee status changed. Refresh and retry."));b.disabled=false;b.textContent="Process Exit";return;}
       if(row.auth_user_id){
         const access=await sb.functions.invoke("set-employee-portal-access",{body:{employee_id:row.id,employment_status:"resigned"}});
@@ -191,7 +191,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   // Direct employee creation is disabled. New records are created only by the verified onboarding approval workflow.
   root.querySelector("#vvhr-exit-export").onclick=()=>{
     const exited=rows.filter(e=>["resigned","terminated"].includes(e.employment_status));
-    const values=[["Employee Code","Employee Name","Department","Designation","Status","Resignation Date","Last Working Day","Exit Reason","Exit Approved At"],...exited.map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.employment_status,e.resignation_date,e.last_working_date,e.exit_reason,e.exit_approved_at])];
+    const values=[["Employee Code","Employee Name","Department","Designation","Status","Resignation Date","Exit Date","Last Working Day","Exit Reason","Exit Approved At"],...exited.map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.employment_status,e.resignation_date,e.exit_date||e.last_working_date,e.last_working_date,e.exit_reason,e.exit_approved_at])];
     const csv=values.map(row=>row.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
     const blob=new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="VermiVeda_Employee_Exit_Report.csv";a.click();URL.revokeObjectURL(url);
   };
