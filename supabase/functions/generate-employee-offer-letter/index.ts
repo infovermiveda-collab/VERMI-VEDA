@@ -1,12 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType } from "npm:docx@9.5.1";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, ImageRun } from "npm:docx@9.5.1";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const green = "216B3B";
 const safe = (v: unknown) => String(v ?? "").trim();
 const dateText = (v: string) => v ? new Date(v + (v.length===10 ? "T00:00:00" : "")).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) : "—";
 const inr = (n: number) => "INR " + Math.round(n||0).toLocaleString("en-IN");
+async function brandSvg(path:string):Promise<Uint8Array>{
+ const response=await fetch("https://raw.githubusercontent.com/infovermiveda-collab/VERMI-VEDA/hr-module-dev/"+path);
+ if(!response.ok)throw new Error("Could not load brand artwork: "+path);
+ return new Uint8Array(await response.arrayBuffer());
+}
+
 function para(text:string, opts:any={}) { return new Paragraph({ spacing:{after:opts.after??100}, alignment:opts.align, children:[new TextRun({text,bold:!!opts.bold,color:opts.color||"26382B",size:opts.size||20,font:"Arial"})] }); }
 function heading(text:string){return new Paragraph({spacing:{before:220,after:100},children:[new TextRun({text,bold:true,color:green,size:22,font:"Arial"})]});}
 function cell(text:string, header=false){return new TableCell({width:{size:50,type:WidthType.PERCENTAGE},shading:header?{fill:"EFF6EF",type:ShadingType.CLEAR}:undefined,margins:{top:90,bottom:90,left:120,right:120},children:[new Paragraph({children:[new TextRun({text,bold:header,color:header?green:"26382B",size:18,font:"Arial"})]})]});}
@@ -31,7 +37,7 @@ Deno.serve(async (req:Request)=>{
   const {data:e,error:eErr}=await admin.from("vvhr_employees").select("id,employee_code,full_name,mobile,email,address,designation,department,joining_date,monthly_fixed_salary,employment_status").eq("id",employeeId).single();
   if(eErr||!e)return new Response(JSON.stringify({error:eErr?.message||"Employee not found"}),{status:404,headers:{...cors,"Content-Type":"application/json"}});
   const {data:existing}=await admin.from("vvhr_employee_documents").select("id,storage_path").eq("employee_id",e.id).eq("document_type","offer_letter").maybeSingle();
-  const monthly=Number(e.monthly_fixed_salary||0), annual=monthly*12, today=new Date();
+  const [logoSvg,signatureSvg]=await Promise.all([brandSvg("vermi-veda-logo.svg"),brandSvg("vermi-veda-signature.svg")]);\n  const monthly=Number(e.monthly_fixed_salary||0), annual=monthly*12, today=new Date();
   const ref="VV/HR/OL/"+today.getFullYear()+"/"+safe(e.employee_code).replace(/[^A-Za-z0-9-]/g,"");
   const name=safe(e.full_name), first=name.split(/\s+/)[0]||name, location=safe(e.address)||"H133-A, Platinum Paradise, Near Malwa College, Indore, MP - 452016 (or assigned branch/field location)";
   const rows=[
