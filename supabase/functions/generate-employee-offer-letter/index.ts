@@ -51,8 +51,8 @@ Deno.serve(async (req:Request)=>{
    new TableRow({children:[cell("Annual Compensation (CTC)",true),cell(inr(annual)+" per annum ("+inr(monthly)+" per month)")]}),
   ];
   const doc=new Document({sections:[{properties:{page:{margin:{top:850,right:850,bottom:850,left:850}}},children:[
-   para("VERMIVEDA",{bold:true,color:green,size:34,align:AlignmentType.RIGHT,after:20}),
-   para("WISDOM OF NATURE, POWER OF SOIL",{bold:true,color:"6A8C5D",size:16,align:AlignmentType.RIGHT,after:30}),
+   new Paragraph({alignment:AlignmentType.RIGHT,spacing:{after:30},children:[new ImageRun({data:logoSvg,type:"svg",transformation:{width:116,height:98}})]}),
+
    para("H133-A, Platinum Paradise, Near Malwa College, Indore, Madhya Pradesh - 452016",{size:15,align:AlignmentType.RIGHT,after:10}),
    para("GSTIN: 23ABBFV4656M1ZT | info.vermiveda@gmail.com | www.vermiveda.com",{size:15,align:AlignmentType.RIGHT,after:180}),
    new Paragraph({border:{bottom:{style:BorderStyle.SINGLE,size:12,color:green,space:8}},spacing:{after:240},children:[]}),
@@ -83,7 +83,7 @@ Deno.serve(async (req:Request)=>{
    para("Mandatory joining documents: Aadhaar Card and PAN Card; educational certificates (10th, 12th, Graduation/Post-Graduation as applicable); previous employment records if experienced; cancelled cheque or bank passbook front page showing account number and IFSC; four recent passport-size colour photographs.",{after:160}),
    para("Please sign and return a duplicate copy of this letter as a token of your acceptance of this offer.",{after:260}),
    para("For VermiVeda,                                                                 CANDIDATE ACCEPTANCE",{bold:true,color:green,after:220}),
-   para("__________________________________                              __________________________________"),
+   new Paragraph({spacing:{before:40,after:20},children:[new ImageRun({data:signatureSvg,type:"svg",transformation:{width:105,height:70}})]}),
    para("SURAJ VISHWAKARMA                                                        Signature of Candidate",{bold:true}),
    para("Partner & HR Head                                                            Name: "+name),
    para("Date: "+dateText(today.toISOString().slice(0,10))+"                                              Confirmed Joining Date: ______________"),
