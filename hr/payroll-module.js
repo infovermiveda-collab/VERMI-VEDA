@@ -33,13 +33,13 @@ export function renderPayrollModule(root, sb, options = {}) {
   }
   // Monthly fixed salary is prorated strictly by paid working days.
   // Example: monthly salary ₹26,000 / 26 working days × 1 paid day = ₹1,000.
-  function recalc(x){const rawWd=Number(period.working_days||0),wd=rawWd>=20&&rawWd<=27?rawWd:26,paid=Math.min(wd,Math.max(0,Number(x.paid_days||0)));x.paid_days=paid;x.unpaid_days=Math.max(0,wd-paid);x.earned_fixed_salary=wd?Math.round(Number(x.fixed_salary)*paid/wd*100)/100:0;x.gross_earnings=+(x.earned_fixed_salary+Number(x.allowances||0)+Number(x.incentives||0)).toFixed(2);x.net_payable=+Math.max(0,x.gross_earnings-Number(x.deductions||0)).toFixed(2);}
+  function recalc(x){const rawWd=Number(period.working_days||0),wd=rawWd>=20&&rawWd<=27?rawWd:26,paid=Math.min(wd,Math.max(0,Number(x.paid_days||0)));x.paid_days=paid;x.unpaid_days=Math.max(0,wd-paid);x.earned_fixed_salary=Math.round(Number(x.fixed_salary||0)*paid/wd*100)/100;x.gross_earnings=+(x.earned_fixed_salary+Number(x.allowances||0)+Number(x.incentives||0)).toFixed(2);x.net_payable=+Math.max(0,x.gross_earnings-Number(x.deductions||0)).toFixed(2);}
   async function openPeriod(){
     const month=$("vvp-month").value,start=$("vvp-start").value,end=$("vvp-end").value,days=Number($("vvp-days").value);
     if(!month||!start||!end||end<start||!Number.isFinite(days)||days<20||days>27){alert("Enter the full-month salary divisor between 20 and 27 working days (normally 26). For one day salary, keep divisor 26 and set employee Paid Days to 1.");return;}
     const payrollMonth=month+"-01";
     const r=await sb.from("vvhr_payroll_periods").select("*").eq("payroll_month",payrollMonth).maybeSingle();if(r.error)throw r.error;
-    if(r.data){period=r.data;if(Number(period.working_days)!==days&&!["approved","paid","locked"].includes(period.status)){const u=await sb.from("vvhr_payroll_periods").update({period_start:start,period_end:end,working_days:days}).eq("id",period.id).select("*").single();if(u.error)throw u.error;period=u.data;}}
+    if(r.data){period=r.data;if(!["approved","paid","locked"].includes(period.status)){const u=await sb.from("vvhr_payroll_periods").update({period_start:start,period_end:end,working_days:days}).eq("id",period.id).select("*").single();if(u.error)throw u.error;period=u.data;}}
     else{const ins=await sb.from("vvhr_payroll_periods").insert({payroll_month:payrollMonth,period_start:start,period_end:end,working_days:days,status:"draft",created_by:userId}).select("*").single();if(ins.error)throw ins.error;period=ins.data;}
     await loadItems();if(!items.length&&period.status==="draft")await generateEmployees();else render();
   }
@@ -120,6 +120,7 @@ export function renderPayrollModule(root, sb, options = {}) {
     if(!period||["approved","paid","locked"].includes(period.status))return;
     const divisor=Number(period.working_days||0);if(divisor<20||divisor>27){alert("Payroll divisor is invalid. Set Monthly Salary Divisor to 26 (allowed 20–27), reopen the draft, and recalculate before saving.");return;}
     const rows=items.map(x=>{recalc(x);return {payroll_period_id:period.id,employee_id:x.employee_id,fixed_salary:x.fixed_salary,paid_days:x.paid_days,unpaid_days:x.unpaid_days,earned_fixed_salary:x.earned_fixed_salary,allowances:x.allowances,incentives:x.incentives,deductions:x.deductions,gross_earnings:x.gross_earnings,net_payable:x.net_payable,payment_status:x.payment_status||"pending",remarks:x.remarks||null};});
+    if(rows.some(x=>x.earned_fixed_salary!==Math.round(Number(x.fixed_salary||0)*Number(x.paid_days||0)/divisor*100)/100)){alert("Salary calculation validation failed. Payroll was not saved.");return;}
     const up=await sb.from("vvhr_payroll_items").upsert(rows,{onConflict:"payroll_period_id,employee_id"});if(up.error)throw up.error;
     const pr=await sb.from("vvhr_payroll_periods").update({status:"generated"}).eq("id",period.id).in("status",["draft","generated"]).select("*").single();if(pr.error)throw pr.error;period=pr.data;await loadItems();render();alert("Payroll saved and generated. Review before approval.");
   }
