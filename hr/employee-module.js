@@ -13,7 +13,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
     <section class="vvhr-employees">
       <div class="vvhr-header">
         <div><h2>Employee Management</h2><p>Employee records, joining details and employment status</p></div>
-        ${canManage ? '<button id="vvhr-add">＋ Add Employee</button>' : ''}
+        ${canManage ? '<span class="vvhr-note">New employees must complete Onboarding and document verification before an ECode is issued.</span>' : ''}
       </div>
       <div class="vvhr-stats" id="vvhr-stats"></div>
       <div class="vvhr-toolbar">
@@ -188,7 +188,7 @@ export function renderEmployeeModule(root, sb, options = {}) {
   function closeForm(){modal.hidden=true;modal.innerHTML="";editing=null;}
   root.querySelector("#vvhr-search").oninput=draw;
   root.querySelector("#vvhr-status").onchange=draw;
-  root.querySelector("#vvhr-add")?.addEventListener("click",()=>openForm());
+  // Direct employee creation is disabled. New records are created only by the verified onboarding approval workflow.
   root.querySelector("#vvhr-exit-export").onclick=()=>{
     const exited=rows.filter(e=>["resigned","terminated"].includes(e.employment_status));
     const values=[["Employee Code","Employee Name","Department","Designation","Status","Resignation Date","Last Working Day","Exit Reason","Exit Approved At"],...exited.map(e=>[e.employee_code,e.full_name,e.department,e.designation,e.employment_status,e.resignation_date,e.last_working_date,e.exit_reason,e.exit_approved_at])];
