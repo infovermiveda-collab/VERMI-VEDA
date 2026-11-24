@@ -118,7 +118,7 @@ export function renderHrMisModule(root, sb, options = {}) {
       ["Payroll Net",p.reduce((s,x)=>s+num(x.net_payable),0)]
     ];
     const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\r\n");
-    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="VermiVeda_HR_MIS_"+$("mis-from").value+"_to_"+$("mis-to").value+".csv";a.click();URL.revokeObjectURL(url);
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="VermiVeda_HR_MIS_"+$("mis-from").value+"_to_"+$("mis-to").value+".csv";link.click();URL.revokeObjectURL(url);
   }
   async function run(fn){if(busy)return;busy=true;root.querySelectorAll("button").forEach(b=>b.disabled=true);try{await fn();}catch(e){console.error(e);$("mis-content").innerHTML='<div class="mis-card" style="color:#b42318">Unable to load HR MIS: '+esc(e.message||e)+'</div>';}finally{busy=false;root.querySelectorAll("button").forEach(b=>b.disabled=false);}}
   $("mis-refresh").addEventListener("click",()=>run(load));$("mis-export").addEventListener("click",exportCsv);
