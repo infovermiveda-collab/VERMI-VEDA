@@ -13,6 +13,42 @@ export function renderOnboardingModule(root, sb, options = {}) {
     ["resume","Resume / CV",true],["joining_form","Joining Form",true],["employee_photo","Employee Photo",false]
   ];
   root.innerHTML = `
+  <style>
+.vvhr-onboard{--vv-green:#176b36;--vv-deep:#0c3d2b;--vv-ink:#18352a;max-width:1180px;margin:0 auto;padding:28px 30px 48px;color:var(--vv-ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+.vvhr-onboard *{box-sizing:border-box}
+.vvhr-onboard-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:26px 30px;border-radius:20px;background:linear-gradient(120deg,#0b3d2b,#176b36 68%,#2b8a40);color:#fff;box-shadow:0 12px 30px #123d2b24;margin-bottom:22px;position:relative;overflow:hidden}
+.vvhr-onboard-head:after{content:"";position:absolute;width:220px;height:220px;border:1px solid #ffffff24;border-radius:50%;right:-55px;top:-115px;box-shadow:0 0 0 24px #ffffff0b,0 0 0 48px #ffffff08}
+.vvhr-onboard-head h2{font-size:25px;line-height:1.2;margin:0 0 7px;font-weight:800;letter-spacing:-.4px;color:#fff}
+.vvhr-onboard-head p{margin:0;color:#d8eddf;font-size:13px}
+.vvhr-step{position:relative;z-index:1;border:1px solid #ffffff45;background:#ffffff16;color:#fff;border-radius:999px;padding:9px 14px;font-size:12px;font-weight:700;white-space:nowrap}
+.vvhr-onboard-card{background:#fff;border:1px solid #e2ece5;border-radius:20px;padding:28px 30px;box-shadow:0 8px 28px #123d2b0b}
+.vvhr-onboard h3{display:flex;align-items:center;gap:11px;font-size:16px;font-weight:800;color:#164b30;margin:28px 0 17px;padding:0 0 12px;border-bottom:1px solid #e8f0ea;counter-increment:vvhr-section}
+.vvhr-onboard h3:first-child{margin-top:0}
+.vvhr-onboard form{counter-reset:vvhr-section}
+.vvhr-onboard h3:before{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:10px;background:#eaf6e9;color:#24713a;font-size:13px;font-weight:800;content:counter(vvhr-section)}
+.vvhr-onboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;margin-bottom:25px}
+.vvhr-onboard label{display:flex;flex-direction:column;gap:7px;color:#304b3c;font-size:12px;font-weight:700;min-width:0}
+.vvhr-onboard input:not([type=file]),.vvhr-onboard select,.vvhr-onboard textarea{width:100%;min-height:45px;padding:11px 13px;border:1px solid #d7e5da;border-radius:10px;background:#fbfdfb;color:#193c2b;font:500 14px inherit;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}
+.vvhr-onboard textarea{min-height:82px;resize:vertical}
+.vvhr-onboard input:focus,.vvhr-onboard select:focus,.vvhr-onboard textarea:focus{border-color:#4caa65;background:#fff;box-shadow:0 0 0 3px #4caa651b}
+.vvhr-onboard input::placeholder,.vvhr-onboard textarea::placeholder{color:#9aa99e}
+.vvhr-onboard .wide{grid-column:1/-1}
+.vvhr-onboard-note{font-size:12px;line-height:1.6;color:#607469;background:#f3f8f3;border:1px solid #e3eee4;padding:12px 15px;border-radius:11px;margin:0 0 18px}
+.vvhr-doc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:15px 0 22px}
+.vvhr-doc{padding:16px;border:1px solid #dfeae1;border-radius:13px;background:linear-gradient(180deg,#fff,#f8fbf8);min-height:120px;justify-content:space-between;transition:transform .18s,border-color .18s,box-shadow .18s}
+.vvhr-doc:hover{transform:translateY(-2px);border-color:#9bc9a4;box-shadow:0 8px 18px #174b3010}
+.vvhr-doc span{font-size:12px;font-weight:800;color:#244a32}
+.vvhr-doc input[type=file]{display:block;width:100%;font-size:11px;color:#4d6857;max-width:100%}
+.vvhr-doc input[type=file]::file-selector-button{border:0;border-radius:7px;background:#e6f3e7;color:#1b6736;padding:7px 10px;font-weight:700;margin-right:8px;cursor:pointer}
+.vvhr-doc small{font-size:10px;color:#829187}
+.vvhr-onboard-actions{display:flex;justify-content:flex-end;border-top:1px solid #e7eee8;padding-top:20px;margin-top:8px}
+.vvhr-onboard-actions button{border:0;border-radius:11px;padding:13px 23px;background:linear-gradient(120deg,#176b36,#238844);color:#fff;font-size:13px;font-weight:800;box-shadow:0 7px 16px #176b3628;cursor:pointer}
+.vvhr-onboard-actions button:disabled{opacity:.6;cursor:wait}
+.vvhr-onboard-error{margin-top:14px;padding:0;color:#b42318;font-size:13px;font-weight:600;line-height:1.5}
+.vvhr-onboard-error.success{padding:13px 15px;border-radius:10px;background:#edf8ef;border:1px solid #cce8d1;color:#176b36}
+@media(max-width:760px){.vvhr-onboard{padding:16px 12px 30px}.vvhr-onboard-head{padding:20px;border-radius:15px;align-items:flex-start;flex-direction:column}.vvhr-onboard-head h2{font-size:21px}.vvhr-onboard-card{padding:20px 16px;border-radius:15px}.vvhr-onboard-grid{grid-template-columns:1fr;gap:13px}.vvhr-onboard .wide{grid-column:auto}.vvhr-doc-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.vvhr-onboard h3{font-size:15px;margin-top:24px}}
+@media(max-width:420px){.vvhr-doc-grid{grid-template-columns:1fr}.vvhr-onboard-actions button{width:100%}}
+</style>
   <section class="vvhr-onboard">
     <header class="vvhr-onboard-head"><div><h2>Employee Onboarding</h2><p>Registration, KYC documents and HR verification</p></div><span class="vvhr-step">Employee Code after approval</span></header>
     <div class="vvhr-onboard-card">
