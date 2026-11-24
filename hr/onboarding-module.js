@@ -71,7 +71,8 @@ export function renderOnboardingModule(root, sb, options = {}) {
           <label>Bank Name *<input name="bank_name" required placeholder="e.g. State Bank of India" autocomplete="organization"></label>
           <label>Account Holder Name *<input name="bank_account_name" required autocomplete="off"></label>
           <label>Bank Account Number *<input name="bank_account_number" required inputmode="numeric" autocomplete="off"></label>
-          <label>IFSC Code *<input name="bank_ifsc" required autocapitalize="characters" placeholder="e.g. SBIN0001234"></label>\n          <label>MICR Code<input name="bank_micr" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9-digit MICR code (optional)"></label>
+          <label>IFSC Code *<input name="bank_ifsc" required autocapitalize="characters" placeholder="e.g. SBIN0001234"></label>
+          <label>MICR Code<input name="bank_micr" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9-digit MICR code (optional)"></label>
         </div>
         <h3>3. Document Upload & Verification</h3><p class="vvhr-onboard-note">Identity documents and the uploaded bank proof will be verified by HR. Enter bank details carefully; they will be used for salary payments.</p>
         <h3>4. Emergency Contact</h3><div class="vvhr-onboard-grid">
@@ -103,7 +104,8 @@ export function renderOnboardingModule(root, sb, options = {}) {
     if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){err.textContent="Enter a valid PAN number (e.g. ABCDE1234F).";err.scrollIntoView({behavior:"smooth",block:"start"});return;}
     const accountNumber=String(fd.get("bank_account_number")||"").trim().replace(/\\s+/g,""),ifsc=String(fd.get("bank_ifsc")||"").trim().toUpperCase();
     if(!/^[0-9]{6,20}$/.test(accountNumber)){err.textContent="Enter a valid bank account number (6–20 digits).";err.scrollIntoView({behavior:"smooth",block:"start"});return;}
-    if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)){err.textContent="Enter a valid 11-character IFSC code.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}\n    const micr=String(fd.get("bank_micr")||"").trim();if(micr&&!/^[0-9]{9}$/.test(micr)){err.textContent="MICR Code must contain exactly 9 digits.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}
+    if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)){err.textContent="Enter a valid 11-character IFSC code.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}
+    const micr=String(fd.get("bank_micr")||"").trim();if(micr&&!/^[0-9]{9}$/.test(micr)){err.textContent="MICR Code must contain exactly 9 digits.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}
     const data={full_name:String(fd.get("full_name")).trim(),mobile:String(fd.get("mobile")).trim(),email:String(fd.get("email")||"").trim()||null,date_of_birth:fd.get("date_of_birth")||null,aadhaar_number:aadhaar,pan_number:pan,gender:fd.get("gender")||null,address:String(fd.get("address")||"").trim()||null,joining_date:fd.get("joining_date"),department:String(fd.get("department")||"").trim()||null,designation:String(fd.get("designation")||"").trim()||null,monthly_fixed_salary:Number(fd.get("monthly_fixed_salary")||0),bank_name:String(fd.get("bank_name")||"").trim(),bank_account_name:String(fd.get("bank_account_name")||"").trim(),bank_account_number:accountNumber,bank_ifsc:ifsc,bank_micr:String(fd.get("bank_micr")||"").trim(),emergency_contact_name:String(fd.get("emergency_contact_name")).trim(),emergency_contact_relationship:String(fd.get("emergency_contact_relationship")||"").trim()||null,emergency_contact_mobile:String(fd.get("emergency_contact_mobile")).trim(),emergency_contact_alt_mobile:String(fd.get("emergency_contact_alt_mobile")||"").trim()||null,status:"under_verification",document_metadata:{},created_by:(await sb.auth.getUser()).data.user?.id||null};
     btn.disabled=true;btn.textContent="Uploading & Saving…";
     let id=null;const uploadedPaths=[];
