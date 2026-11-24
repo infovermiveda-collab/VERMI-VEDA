@@ -34,9 +34,21 @@ export function renderProvisioning(root, sb, options = {}) {
       return `<tr>
         <td><b>${esc(x.employee_code)}</b></td><td>${esc(x.full_name)}</td><td>${esc(x.email||"—")}</td>
         <td>${esc(x.employment_status||"—")}</td><td><span class="pill ${linked?"green":canLink?"orange":""}">${esc(label)}</span></td>
-        <td>${canLink?`<button class="alt" data-link="${esc(x.id)}">Create / Link Login</button>`:linked?"—":"—"}</td>
+        <td>${canLink?`<button class="alt" data-link="${esc(x.id)}">Create / Link Login</button>`:linked?`<button class="alt" data-reset="${esc(x.id)}">Change Password</button>`:"—"}</td>
       </tr>`;
     }).join("")||'<tr><td colspan="6">No employees found.</td></tr>';
+    body.querySelectorAll("[data-reset]").forEach(b=>b.onclick=async()=>{
+      const row=rows.find(x=>x.id===b.dataset.reset);if(!row)return;
+      const password=prompt("Set a new password for "+row.employee_code+" ("+row.full_name+"). Minimum 9 characters:");
+      if(password===null)return;
+      if(password.length<9){msg.textContent="Password must be at least 9 characters.";return;}
+      if(!confirm("Change the Employee Portal password for "+row.employee_code+"?"))return;
+      b.disabled=true;b.textContent="Updating…";
+      const res=await sb.functions.invoke("admin-reset-employee-password",{body:{employee_id:row.id,new_password:password}});
+      if(res.error||!res.data?.success){msg.textContent="Password change failed: "+(res.error?.message||res.data?.error||"Unknown error");b.disabled=false;b.textContent="Change Password";return;}
+      msg.textContent="Password updated for "+row.employee_code+". Share it securely with the employee.";
+      b.disabled=false;b.textContent="Change Password";
+    });
     body.querySelectorAll("[data-link]").forEach(b=>b.onclick=async()=>{
       if(!confirm("Create a new Employee Portal login or link an existing account matching this employee's work email?"))return;
       b.disabled=true;b.textContent="Linking…";msg.textContent="";
