@@ -28,6 +28,8 @@ export function renderPayrollModule(root, sb, options = {}) {
     $("vvp-paid")?.addEventListener("click",markPaid);
     $("vvp-csv")?.addEventListener("click",salaryCsv);
   }
+  // Monthly fixed salary is prorated strictly by paid working days.
+  // Example: monthly salary ₹26,000 / 26 working days × 1 paid day = ₹1,000.
   function recalc(x){const wd=Number(period.working_days||0),paid=Math.min(wd,Math.max(0,Number(x.paid_days||0)));x.paid_days=paid;x.unpaid_days=Math.max(0,wd-paid);x.earned_fixed_salary=wd?Math.round(Number(x.fixed_salary)*paid/wd*100)/100:0;x.gross_earnings=+(x.earned_fixed_salary+Number(x.allowances||0)+Number(x.incentives||0)).toFixed(2);x.net_payable=+Math.max(0,x.gross_earnings-Number(x.deductions||0)).toFixed(2);}
   async function openPeriod(){
     const month=$("vvp-month").value,start=$("vvp-start").value,end=$("vvp-end").value,days=Number($("vvp-days").value);
@@ -92,7 +94,7 @@ export function renderPayrollModule(root, sb, options = {}) {
     if(er.error)throw er.error;
     const existing=new Set(items.map(x=>x.employee_id)),fresh=(er.data||[]).filter(e=>!existing.has(e.id));
     if(!fresh.length){alert("No new active/probation employees to add.");return;}
-    const rows=fresh.map(e=>{const fixed=Number(e.monthly_fixed_salary||0);const x={payroll_period_id:period.id,employee_id:e.id,fixed_salary:fixed,paid_days:Number(period.working_days),unpaid_days:0,earned_fixed_salary:fixed,allowances:0,incentives:0,deductions:0,gross_earnings:fixed,net_payable:fixed,payment_status:"pending"};return x;});
+    const rows=fresh.map(e=>{const fixed=Number(e.monthly_fixed_salary||0);const x={payroll_period_id:period.id,employee_id:e.id,fixed_salary:fixed,paid_days:0,unpaid_days:Number(period.working_days),earned_fixed_salary:0,allowances:0,incentives:0,deductions:0,gross_earnings:0,net_payable:0,payment_status:"pending"};return x;});
     const ins=await sb.from("vvhr_payroll_items").insert(rows);if(ins.error)throw ins.error;
     period.status="draft";await loadItems();render();
   }
