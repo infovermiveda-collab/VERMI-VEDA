@@ -24,7 +24,10 @@ export function renderOnboardingModule(root, sb, options = {}) {
           <label>Date of Birth *<input name="date_of_birth" type="date" required></label>
           <label>Gender<select name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></label>
           <label>Joining Date *<input name="joining_date" type="date" required></label>
-          <label>Department<input name="department"></label><label>Designation<input name="designation"></label>
+          <label>Department<select name="department"><option value="">Select Department</option><option>Operations</option><option>HR</option><option>Finance</option><option>Sales &amp; Marketing</option><option>Production</option><option>Logistics</option><option>Field Operations</option><option>IT</option><option>Other</option></select></label>
+          <label>Designation *<select name="designation" required><option value="">Select Designation</option><option>Founder</option><option>Manager</option><option>Deputy Manager</option><option>Assistant Manager</option><option>Team Leader</option><option>HR Executive</option><option>Accountant</option><option>Executive</option><option>Field Executive</option><option>Delivery Executive</option><option>Supervisor</option><option>Data Entry Operator</option><option>Office Assistant</option><option>Worker</option><option>Other</option></select></label>
+          <label>Aadhaar Number *<input name="aadhaar_number" required inputmode="numeric" maxlength="12" pattern="[0-9]{12}" placeholder="12-digit Aadhaar number" autocomplete="off"></label>
+          <label>PAN Number *<input name="pan_number" required maxlength="10" pattern="[A-Z]{5}[0-9]{4}[A-Z]" placeholder="ABCDE1234F" autocapitalize="characters" autocomplete="off"></label>
           <label>Monthly Salary (HR only) ₹<input name="monthly_fixed_salary" type="number" min="0" step="1"></label>
           <label class="wide">Complete Address<textarea name="address" rows="2"></textarea></label>
         </div>
@@ -54,6 +57,13 @@ export function renderOnboardingModule(root, sb, options = {}) {
     const fileMap={}; for(const [key,label,required] of docs){const file=form.elements[key]?.files?.[0];if(required&&!file){err.textContent=label+" is required.";return;}if(file&&file.size>8*1024*1024){err.textContent=label+" exceeds 8 MB.";return;}if(file&& !["application/pdf","image/jpeg","image/png"].includes(file.type)){err.textContent=label+" must be PDF, JPG or PNG.";return;}if(file)fileMap[key]=file;}
     const mobile=String(fd.get("mobile")||"").replace(/\D/g,"");
     if(mobile.length!==10){err.textContent="Enter a valid 10-digit mobile number.";return;}
+    const dob=String(fd.get("date_of_birth")||""),joining=String(fd.get("joining_date")||"");
+    if(!dob||!joining){err.textContent="Date of Birth and Date of Joining are required.";return;}
+    const minDob=new Date(joining+"T00:00:00");minDob.setFullYear(minDob.getFullYear()-18);
+    if(new Date(dob+"T00:00:00")>minDob){err.textContent="Employee must be at least 18 years old on the Date of Joining.";return;}
+    const aadhaar=String(fd.get("aadhaar_number")||"").replace(/\D/g,""),pan=String(fd.get("pan_number")||"").trim().toUpperCase();
+    if(!/^[0-9]{12}$/.test(aadhaar)){err.textContent="Enter a valid 12-digit Aadhaar number.";return;}
+    if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){err.textContent="Enter a valid PAN number (e.g. ABCDE1234F).";return;}
     const accountNumber=String(fd.get("bank_account_number")||"").trim().replace(/\\s+/g,""),ifsc=String(fd.get("bank_ifsc")||"").trim().toUpperCase();
     if(!/^[0-9]{6,20}$/.test(accountNumber)){err.textContent="Enter a valid bank account number (6–20 digits).";return;}
     if(!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)){err.textContent="Enter a valid 11-character IFSC code.";return;}
