@@ -10,7 +10,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
   const docs = [
     ["aadhaar_front","Aadhaar Front",true],["aadhaar_back","Aadhaar Back",true],
     ["pan_card","PAN Card",true],["bank_proof","Bank Statement / Passbook / Cancelled Cheque",true],
-    ["employee_photo","Employee Photo",true],["resume","Resume / CV",false]
+    ["resume","Resume / CV",true],["joining_form","Joining Form",true],["employee_photo","Employee Photo",false]
   ];
   root.innerHTML = `
   <section class="vvhr-onboard">
@@ -21,7 +21,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
           <label>Full Name *<input name="full_name" required autocomplete="name"></label>
           <label>Mobile Number *<input name="mobile" required inputmode="tel" pattern="[0-9+ -]{10,15}"></label>
           <label>Email ID *<input name="email" type="email" required></label>
-          <label>Date of Birth<input name="date_of_birth" type="date"></label>
+          <label>Date of Birth *<input name="date_of_birth" type="date" required></label>
           <label>Gender<select name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></label>
           <label>Joining Date *<input name="joining_date" type="date" required></label>
           <label>Department<input name="department"></label><label>Designation<input name="designation"></label>
