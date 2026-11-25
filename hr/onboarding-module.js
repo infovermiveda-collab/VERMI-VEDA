@@ -55,7 +55,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
       <form id="vvhr-onboard-form">
         <h3>1. Basic Details</h3><div class="vvhr-onboard-grid">
           <label>Full Name *<input name="full_name" required autocomplete="name"></label>
-          <label>Mobile Number *<input name="mobile" required inputmode="tel" pattern="[0-9+ -]{10,15}"></label>
+          <label>Mobile Number *<input name="mobile" required inputmode="tel" pattern="[0-9+ \\-]{10,15}"></label>
           <label>Email ID *<input name="email" type="email" required></label>
           <label>Date of Birth *<input name="date_of_birth" type="date" required></label>
           <label>Gender<select name="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></label>
@@ -78,7 +78,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
         <h3>4. Emergency Contact</h3><div class="vvhr-onboard-grid">
           <label>Contact Person Name *<input name="emergency_contact_name" required></label>
           <label>Relationship *<select name="emergency_contact_relationship" required><option value="">Select Relationship</option><option>Father</option><option>Mother</option><option>Husband</option><option>Wife</option><option>Son</option><option>Daughter</option><option>Brother</option><option>Sister</option><option>Guardian</option><option>Other</option></select></label>
-          <label>Emergency Mobile Number *<input name="emergency_contact_mobile" required inputmode="tel" pattern="[0-9+ -]{10,15}"></label>
+          <label>Emergency Mobile Number *<input name="emergency_contact_mobile" required inputmode="tel" pattern="[0-9+ \\-]{10,15}"></label>
           <label>Alternate Number<input name="emergency_contact_alt_mobile" inputmode="tel"></label>
         </div>
         <h3>5. Documents Upload</h3><p class="vvhr-onboard-note">Required documents are marked *. Files are private; upload limit 8 MB per file.</p>
@@ -89,9 +89,16 @@ export function renderOnboardingModule(root, sb, options = {}) {
       </form>
     </div>
   </section>`;
-  root.querySelector("#vvhr-onboard-form").onsubmit = async ev => {
+  const onboardingForm = root.querySelector("#vvhr-onboard-form");
+  if (!onboardingForm) {
+    root.innerHTML = '<div class="vvhr-onboard-error">Onboarding form could not be initialized. Please refresh and try again.</div>';
+    return;
+  }
+  onboardingForm.onsubmit = async ev => {
     ev.preventDefault();
-    const form=ev.currentTarget, fd=new FormData(form), err=root.querySelector("#vvhr-onboard-error"), btn=root.querySelector("#vvhr-onboard-save");
+    const form=ev.currentTarget, fd=new FormData(form), btn=root.querySelector("#vvhr-onboard-save");
+    let err=form.querySelector("#vvhr-onboard-error");
+    if(!err){err=document.createElement("div");err.id="vvhr-onboard-error";err.className="vvhr-onboard-error";err.setAttribute("role","status");err.setAttribute("aria-live","polite");form.prepend(err);}
     err.textContent="";
     const fileMap={}; for(const [key,label,required] of docs){const file=form.elements[key]?.files?.[0];if(required&&!file){err.textContent=label+" is required.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}if(file&&file.size>8*1024*1024){err.textContent=label+" exceeds 8 MB.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}if(file&& !["application/pdf","image/jpeg","image/png"].includes(file.type)){err.textContent=label+" must be PDF, JPG or PNG.";err.scrollIntoView({behavior:"smooth",block:"start"});return;}if(file)fileMap[key]=file;}
     const mobile=String(fd.get("mobile")||"").replace(/\D/g,"");
