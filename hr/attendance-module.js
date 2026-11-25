@@ -29,6 +29,17 @@ export function renderAttendanceModule(root, sb, options = {}) {
           <label>Employee<select id="vvac-employee"><option value="">Loading employees…</option></select></label>
         </div>
       </section>
+      <section class="vvac-bulk-panel">
+        <div class="vvac-bulk-title"><div><h3>Bulk Mark Present</h3><p>Mark multiple dates as Present in one action. Existing attendance entries will be skipped.</p></div></div>
+        <form id="vvac-bulk-form" class="vvac-bulk-form">
+          <label>From Date<input type="date" name="from_date" required></label>
+          <label>To Date<input type="date" name="to_date" required></label>
+          <label>Shift<select name="shift_name"><option value="">Select Shift</option><option value="10-19">10-19</option><option value="10-7">10-7</option></select></label>
+          <label class="vvac-bulk-check"><input type="checkbox" name="skip_sundays" checked> Skip Sundays</label>
+          <button type="submit" id="vvac-bulk-save">Mark Selected Dates Present</button>
+        </form>
+        <p class="vvac-bulk-result" id="vvac-bulk-result" aria-live="polite"></p>
+      </section>
       <section class="vvac-calendar-panel">
         <div class="vvac-cal-head">
           <div class="vvac-nav"><button id="vvac-prev-year" title="Previous year">«</button><button id="vvac-prev" title="Previous month">‹</button><button id="vvac-today">Today</button><button id="vvac-next" title="Next month">›</button><button id="vvac-next-year" title="Next year">»</button></div>
@@ -43,6 +54,37 @@ export function renderAttendanceModule(root, sb, options = {}) {
     </section>`;
   const monthInput=root.querySelector("#vvac-month"), employeeSelect=root.querySelector("#vvac-employee"), grid=root.querySelector("#vvac-grid"), editor=root.querySelector("#vvac-editor"), foot=root.querySelector("#vvac-foot");
   const legend=root.querySelector("#vvac-legend");
+  const bulkForm=root.querySelector("#vvac-bulk-form"), bulkResult=root.querySelector("#vvac-bulk-result");
+  const bulkFrom=bulkForm.elements.from_date, bulkTo=bulkForm.elements.to_date;
+  const monthStart=()=>year+"-"+pad(month+1)+"-01";
+  const monthEnd=()=>year+"-"+pad(month+1)+"-"+pad(new Date(year,month+1,0).getDate());
+  bulkFrom.value=monthStart();bulkTo.value=monthEnd();
+  async function bulkMarkPresent(ev){
+    ev.preventDefault();if(busy)return;
+    const from=bulkFrom.value,to=bulkTo.value;
+    if(!from||!to||from>to){bulkResult.textContent="Please select a valid date range.";return;}
+    if(from<monthStart()||to>monthEnd()){bulkResult.textContent="Please select dates within the currently selected attendance month.";return;}
+    const skipSundays=bulkForm.elements.skip_sundays.checked;
+    const existing=new Set(records.map(r=>r.attendance_date));
+    const dates=[];
+    for(let d=new Date(from+"T12:00:00");d<=new Date(to+"T12:00:00");d.setDate(d.getDate()+1)){
+      const key=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+      if(existing.has(key))continue;
+      if(skipSundays&&d.getDay()===0)continue;
+      dates.push(key);
+    }
+    if(!dates.length){bulkResult.textContent="No new dates to mark. Existing entries were skipped.";return;}
+    const user=(await sb.auth.getUser()).data?.user?.id||null;
+    const shift=bulkForm.elements.shift_name.value.trim()||null;
+    const payloads=dates.map(attendance_date=>({employee_id:selectedEmployee,attendance_date,status:"present",shift_name:shift,marked_by:user}));
+    const btn=bulkForm.querySelector("#vvac-bulk-save");btn.disabled=true;btn.textContent="Saving…";busy=true;bulkResult.textContent="Saving "+dates.length+" attendance entries…";
+    const saved=await sb.from("vvhr_attendance").upsert(payloads,{onConflict:"employee_id,attendance_date"}).select("*");
+    busy=false;btn.disabled=false;btn.textContent="Mark Selected Dates Present";
+    if(saved.error){bulkResult.textContent="Bulk attendance failed: "+saved.error.message;return;}
+    records.push(...(saved.data||[]));drawCalendar();
+    bulkResult.textContent=(saved.data||[]).length+" dates marked Present. "+(from+" to "+to)+". Existing entries were not changed.";
+  }
+  bulkForm.onsubmit=bulkMarkPresent;
   const setLegend=summary=>{
     const items=[["Present",summary.present,"present"],["Working on Weekend",summary.weekend,"weekend"],["Working on Holiday",summary.holidayWork,"holidaywork"],["Absent",summary.absent,"absent"],["Weekly Off",summary.weeklyOff,"weeklyoff"],["Holiday",summary.holiday,"holiday"],["Travel",summary.travel,"travel"],["Late Coming",summary.late,"late"]];
     legend.innerHTML=items.map(([label,n,cls])=>'<span class="vvac-chip vvac-chip-'+cls+'">'+label+' - '+n+'</span>').join("");
@@ -124,7 +166,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
       <div class="vvac-editor-head"><div><h3>Attendance Entry</h3><p>${esc(dayLabel)}</p></div><button type="button" class="vvac-close" id="vvac-close">✕</button></div>
       <form id="vvac-form" class="vvac-form">
         <label>Attendance Status<select name="status" required>${Object.entries(statusInfo).map(([v,x])=>'<option value="'+v+'" '+(r.status===v?'selected':'')+'>'+x[1]+'</option>').join("")}</select></label>
-        <label>Shift Name<input name="shift_name" maxlength="80" value="${esc(r.shift_name||"")}" placeholder="e.g. Morning Shift"></label>
+        <label>Shift<select name="shift_name"><option value="">Select Shift</option>${[...new Set(["10-19","10-7",r.shift_name].filter(Boolean))].map(s=>'<option value="'+esc(s)+'" '+(r.shift_name===s?"selected":"")+' >'+esc(s)+'</option>').join("")}</select></label>
         <label>Shift Start<input name="shift_start_time" type="time" value="${esc(r.shift_start_time||"")}"></label>
         <label>Shift End<input name="shift_end_time" type="time" value="${esc(r.shift_end_time||"")}"></label>
         <label>Check In<input name="check_in" type="time" value="${esc(r.check_in||"")}"></label>
