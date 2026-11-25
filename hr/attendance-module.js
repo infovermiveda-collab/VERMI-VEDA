@@ -34,7 +34,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
         <form id="vvac-bulk-form" class="vvac-bulk-form">
           <label>From Date<input type="date" name="from_date" required></label>
           <label>To Date<input type="date" name="to_date" required></label>
-          <label>Shift Name (optional)<input type="text" name="shift_name" maxlength="80" placeholder="e.g. General Shift"></label>
+          <label>Shift<select name="shift_name"><option value="">Select Shift</option><option value="10-19">10-19</option><option value="10-7">10-7</option></select></label>
           <label class="vvac-bulk-check"><input type="checkbox" name="skip_sundays" checked> Skip Sundays</label>
           <button type="submit" id="vvac-bulk-save">Mark Selected Dates Present</button>
         </form>
@@ -166,7 +166,7 @@ export function renderAttendanceModule(root, sb, options = {}) {
       <div class="vvac-editor-head"><div><h3>Attendance Entry</h3><p>${esc(dayLabel)}</p></div><button type="button" class="vvac-close" id="vvac-close">✕</button></div>
       <form id="vvac-form" class="vvac-form">
         <label>Attendance Status<select name="status" required>${Object.entries(statusInfo).map(([v,x])=>'<option value="'+v+'" '+(r.status===v?'selected':'')+'>'+x[1]+'</option>').join("")}</select></label>
-        <label>Shift Name<input name="shift_name" maxlength="80" value="${esc(r.shift_name||"")}" placeholder="e.g. Morning Shift"></label>
+        <label>Shift<select name="shift_name"><option value="">Select Shift</option>${[...new Set(["10-19","10-7",r.shift_name].filter(Boolean))].map(s=>'<option value="'+esc(s)+'" '+(r.shift_name===s?"selected":"")+' >'+esc(s)+'</option>').join("")}</select></label>
         <label>Shift Start<input name="shift_start_time" type="time" value="${esc(r.shift_start_time||"")}"></label>
         <label>Shift End<input name="shift_end_time" type="time" value="${esc(r.shift_end_time||"")}"></label>
         <label>Check In<input name="check_in" type="time" value="${esc(r.check_in||"")}"></label>
