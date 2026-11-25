@@ -84,6 +84,7 @@ export function renderOnboardingModule(root, sb, options = {}) {
         <h3>5. Documents Upload</h3><p class="vvhr-onboard-note">Required documents are marked *. Files are private; upload limit 8 MB per file.</p>
         <div class="vvhr-doc-grid">${docs.map(([key,label,required])=>`<label class="vvhr-doc"><span>${escapeHtml(label)} ${required?"*":""}</span><input type="file" name="${key}" accept=".pdf,.jpg,.jpeg,.png" ${required?"required":""}><small>PDF/JPG/PNG</small></label>`).join("")}</div>
         <div class="vvhr-onboard-note">Employee code is not generated during registration. HR will review the details and documents first.</div>
+        <div id="vvhr-onboard-error" class="vvhr-onboard-error" role="status" aria-live="polite"></div>
         <div class="vvhr-onboard-actions"><button type="submit" id="vvhr-onboard-save">Submit Registration</button></div>
       </form>
     </div>
